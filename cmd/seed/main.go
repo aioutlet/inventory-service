@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -15,177 +16,122 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type SampleProduct struct {
-	SKU         string  `json:"sku"`
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Price       float64 `json:"price"`
-	Category    string  `json:"category"`
-	Stock       int     `json:"stock"`
-	ReorderLevel int    `json:"reorder_level"`
-	MaxStock    int     `json:"max_stock"`
-}
-
-var sampleProducts = []SampleProduct{
-	{
-		SKU:         "LAPTOP-001",
-		Name:        "MacBook Pro 16-inch",
-		Description: "Apple MacBook Pro with M2 chip, 16GB RAM, 512GB SSD",
-		Price:       2499.99,
-		Category:    "Laptops",
-		Stock:       25,
-		ReorderLevel: 5,
-		MaxStock:    100,
-	},
-	{
-		SKU:         "LAPTOP-002",
-		Name:        "Dell XPS 13",
-		Description: "Dell XPS 13 with Intel i7, 16GB RAM, 256GB SSD",
-		Price:       1299.99,
-		Category:    "Laptops",
-		Stock:       15,
-		ReorderLevel: 3,
-		MaxStock:    50,
-	},
-	{
-		SKU:         "MOUSE-001",
-		Name:        "Logitech MX Master 3",
-		Description: "Advanced wireless mouse with ergonomic design",
-		Price:       99.99,
-		Category:    "Accessories",
-		Stock:       150,
-		ReorderLevel: 20,
-		MaxStock:    300,
-	},
-	{
-		SKU:         "KEYBOARD-001",
-		Name:        "Apple Magic Keyboard",
-		Description: "Wireless keyboard with numeric keypad",
-		Price:       149.99,
-		Category:    "Accessories",
-		Stock:       75,
-		ReorderLevel: 10,
-		MaxStock:    200,
-	},
-	{
-		SKU:         "MONITOR-001",
-		Name:        "LG UltraWide 34-inch",
-		Description: "34-inch curved ultrawide monitor with 4K resolution",
-		Price:       599.99,
-		Category:    "Monitors",
-		Stock:       8,
-		ReorderLevel: 2,
-		MaxStock:    30,
-	},
-	{
-		SKU:         "TABLET-001",
-		Name:        "iPad Pro 12.9-inch",
-		Description: "iPad Pro with M2 chip, 128GB storage, Wi-Fi",
-		Price:       1099.99,
-		Category:    "Tablets",
-		Stock:       20,
-		ReorderLevel: 5,
-		MaxStock:    75,
-	},
-	{
-		SKU:         "PHONE-001",
-		Name:        "iPhone 15 Pro",
-		Description: "iPhone 15 Pro 256GB in Natural Titanium",
-		Price:       1199.99,
-		Category:    "Smartphones",
-		Stock:       30,
-		ReorderLevel: 10,
-		MaxStock:    100,
-	},
-	{
-		SKU:         "HEADPHONES-001",
-		Name:        "AirPods Pro (2nd Gen)",
-		Description: "Active noise cancellation wireless earbuds",
-		Price:       249.99,
-		Category:    "Audio",
-		Stock:       100,
-		ReorderLevel: 15,
-		MaxStock:    250,
-	},
-	{
-		SKU:         "SPEAKER-001",
-		Name:        "HomePod mini",
-		Description: "Smart speaker with amazing sound and Siri",
-		Price:       99.99,
-		Category:    "Audio",
-		Stock:       45,
-		ReorderLevel: 8,
-		MaxStock:    120,
-	},
-	{
-		SKU:         "CAMERA-001",
-		Name:        "Canon EOS R5",
-		Description: "Full-frame mirrorless camera with 8K video",
-		Price:       3899.99,
-		Category:    "Cameras",
-		Stock:       5,
-		ReorderLevel: 1,
-		MaxStock:    15,
-	},
+type InventoryData struct {
+	ProductID         string    `json:"product_id"`
+	ProductSKU        string    `json:"product_sku"`
+	ProductName       string    `json:"product_name"`
+	Quantity          int       `json:"quantity"`
+	ReservedQuantity  int       `json:"reserved_quantity"`
+	MinStockLevel     int       `json:"min_stock_level"`
+	MaxStockLevel     int       `json:"max_stock_level"`
+	WarehouseLocation string    `json:"warehouse_location"`
+	Supplier          string    `json:"supplier"`
+	CostPrice         float64   `json:"cost_price"`
+	LastRestocked     time.Time `json:"last_restocked"`
+	Status            string    `json:"status"`
 }
 
 func main() {
+	fmt.Println("🌱 AI Outlet - Inventory Service Data Seeder")
+	fmt.Println("==================================================")
+
 	var (
 		clearData = flag.Bool("clear", false, "Clear existing data before seeding")
-		jsonFile  = flag.String("file", "", "JSON file with sample data")
+		jsonFile  = flag.String("file", "", "JSON file with inventory data")
+		verbose   = flag.Bool("verbose", false, "Enable verbose logging")
+		summary   = flag.Bool("summary", true, "Show summary after seeding")
 	)
 	flag.Parse()
 
+	if *verbose {
+		log.SetFlags(log.LstdFlags | log.Lshortfile)
+		log.Println("🔍 Verbose logging enabled")
+	}
+
 	// Load configuration
+	log.Println("⚙️  Loading configuration...")
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		log.Fatalf("❌ Failed to load config: %v", err)
 	}
+	log.Println("✅ Configuration loaded successfully")
 
 	// Connect to database
+	log.Println("🔌 Connecting to database...")
 	db, err := database.Connect(cfg.Database)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("❌ Failed to connect to database: %v", err)
 	}
 	defer db.Close()
+	log.Println("✅ Database connected successfully")
 
-	// Load data from file if specified
-	products := sampleProducts
-	if *jsonFile != "" {
-		products, err = loadProductsFromFile(*jsonFile)
-		if err != nil {
-			log.Fatalf("Failed to load products from file: %v", err)
-		}
+	// Test database connection
+	if err := db.Ping(); err != nil {
+		log.Fatalf("❌ Database connection test failed: %v", err)
 	}
+	log.Println("✅ Database connection verified")
+
+	// Determine which JSON file to use
+	var dataFile string
+	if *jsonFile != "" {
+		dataFile = *jsonFile
+		log.Printf("📁 Using specified file: %s", dataFile)
+	} else {
+		// Use default inventory data file
+		dataFile = "scripts/inventory-data.json"
+		log.Printf("📁 Using default file: %s", dataFile)
+	}
+
+	// Check if file exists
+	if _, err := os.Stat(dataFile); os.IsNotExist(err) {
+		log.Fatalf("❌ Data file not found: %s", dataFile)
+	}
+
+	// Load inventory data from JSON file
+	log.Printf("� Loading inventory data from: %s", dataFile)
+	inventoryItems, err := loadInventoryFromFile(dataFile)
+	if err != nil {
+		log.Fatalf("❌ Failed to load inventory data: %v", err)
+	}
+	log.Printf("✅ Loaded %d inventory items", len(inventoryItems))
 
 	// Clear existing data if requested
 	if *clearData {
+		log.Println("🧹 Clearing existing data...")
 		if err := clearExistingData(db); err != nil {
-			log.Fatalf("Failed to clear existing data: %v", err)
+			log.Fatalf("❌ Failed to clear existing data: %v", err)
 		}
-		log.Println("Cleared existing data")
+		log.Println("✅ Existing data cleared successfully")
 	}
 
 	// Seed data
-	if err := seedProducts(db, products); err != nil {
-		log.Fatalf("Failed to seed products: %v", err)
+	log.Printf("🌱 Seeding %d inventory items...", len(inventoryItems))
+	if err := seedInventoryData(db, inventoryItems, *verbose); err != nil {
+		log.Fatalf("❌ Failed to seed inventory data: %v", err)
 	}
 
-	log.Printf("Successfully seeded %d products", len(products))
+	log.Printf("✅ Successfully seeded %d items", len(inventoryItems))
+
+	if *summary {
+		log.Println("📊 Database Summary:")
+		printDatabaseSummary(db)
+	}
+
+	log.Println("🎉 Seeding completed successfully!")
 }
 
-func loadProductsFromFile(filename string) ([]SampleProduct, error) {
+func loadInventoryFromFile(filename string) ([]InventoryData, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
 
-	var products []SampleProduct
-	if err := json.Unmarshal(data, &products); err != nil {
+	var inventory []InventoryData
+	if err := json.Unmarshal(data, &inventory); err != nil {
 		return nil, err
 	}
 
-	return products, nil
+	return inventory, nil
 }
 
 func clearExistingData(db *sql.DB) error {
@@ -198,35 +144,46 @@ func clearExistingData(db *sql.DB) error {
 
 	for _, query := range queries {
 		if _, err := db.Exec(query); err != nil {
-			return err
+			log.Printf("⚠️  Warning: %v", err)
 		}
 	}
 
 	return nil
 }
 
-func seedProducts(db *sql.DB, products []SampleProduct) error {
+func seedInventoryData(db *sql.DB, inventory []InventoryData, verbose bool) error {
 	tx, err := db.Begin()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
 
 	// Prepare statements
 	productStmt, err := tx.Prepare(`
 		INSERT INTO products (id, sku, name, description, price, category, is_active)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (sku) DO UPDATE SET
+		name = EXCLUDED.name,
+		description = EXCLUDED.description,
+		price = EXCLUDED.price,
+		category = EXCLUDED.category`)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to prepare product statement: %w", err)
 	}
 	defer productStmt.Close()
 
 	inventoryStmt, err := tx.Prepare(`
 		INSERT INTO inventory_items (product_id, sku, quantity_available, quantity_reserved, 
 									reorder_level, max_stock, last_restocked)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (sku) DO UPDATE SET
+		quantity_available = EXCLUDED.quantity_available,
+		quantity_reserved = EXCLUDED.quantity_reserved,
+		reorder_level = EXCLUDED.reorder_level,
+		max_stock = EXCLUDED.max_stock,
+		last_restocked = EXCLUDED.last_restocked`)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to prepare inventory statement: %w", err)
 	}
 	defer inventoryStmt.Close()
 
@@ -234,59 +191,109 @@ func seedProducts(db *sql.DB, products []SampleProduct) error {
 		INSERT INTO stock_movements (product_id, sku, movement_type, quantity, reference, reason, created_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to prepare stock movement statement: %w", err)
 	}
 	defer stockMovementStmt.Close()
 
 	// Insert data
-	for _, product := range products {
+	for i, item := range inventory {
 		productID := uuid.New()
-		now := time.Now()
 
-		// Insert product
+		// Calculate price from cost price (add 25% markup as example)
+		price := item.CostPrice * 1.25
+
+		// Insert/update product
 		_, err := productStmt.Exec(
 			productID,
-			product.SKU,
-			product.Name,
-			product.Description,
-			product.Price,
-			product.Category,
+			item.ProductSKU,
+			item.ProductName,
+			fmt.Sprintf("Inventory item: %s", item.ProductName),
+			price,
+			"General", // Default category
 			true,
 		)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to insert product %s: %w", item.ProductSKU, err)
 		}
 
-		// Insert inventory item
+		// Insert/update inventory item
 		_, err = inventoryStmt.Exec(
 			productID,
-			product.SKU,
-			product.Stock,
-			0, // No reserved stock initially
-			product.ReorderLevel,
-			product.MaxStock,
-			&now,
+			item.ProductSKU,
+			item.Quantity,
+			item.ReservedQuantity,
+			item.MinStockLevel,
+			item.MaxStockLevel,
+			item.LastRestocked,
 		)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to insert inventory for %s: %w", item.ProductSKU, err)
 		}
 
-		// Insert initial stock movement
-		_, err = stockMovementStmt.Exec(
-			productID,
-			product.SKU,
-			"in",
-			product.Stock,
-			"SEED-DATA",
-			"Initial stock from data seeding",
-			"system",
-		)
-		if err != nil {
-			return err
+		// Insert stock movement for available quantity
+		if item.Quantity > 0 {
+			_, err = stockMovementStmt.Exec(
+				productID,
+				item.ProductSKU,
+				"in",
+				item.Quantity,
+				"SEED-DATA",
+				fmt.Sprintf("Initial stock from data seeding - %s", item.Status),
+				"system",
+			)
+			if err != nil {
+				return fmt.Errorf("failed to insert stock movement for %s: %w", item.ProductSKU, err)
+			}
 		}
 
-		log.Printf("Seeded product: %s (%s) with %d units", product.Name, product.SKU, product.Stock)
+		if verbose {
+			log.Printf("✓ [%d/%d] Seeded: %s (%s) - Qty: %d, Reserved: %d, Status: %s", 
+				i+1, len(inventory), item.ProductName, item.ProductSKU, 
+				item.Quantity, item.ReservedQuantity, item.Status)
+		}
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+func printDatabaseSummary(db *sql.DB) {
+	// Count products
+	var productCount int
+	db.QueryRow("SELECT COUNT(*) FROM products").Scan(&productCount)
+	log.Printf("   📦 Products: %d", productCount)
+
+	// Count inventory items
+	var inventoryCount int
+	db.QueryRow("SELECT COUNT(*) FROM inventory_items").Scan(&inventoryCount)
+	log.Printf("   📊 Inventory Items: %d", inventoryCount)
+
+	// Count stock movements
+	var movementCount int
+	db.QueryRow("SELECT COUNT(*) FROM stock_movements").Scan(&movementCount)
+	log.Printf("   📈 Stock Movements: %d", movementCount)
+
+	// Total stock quantity
+	var totalStock sql.NullInt64
+	db.QueryRow("SELECT SUM(quantity_available) FROM inventory_items").Scan(&totalStock)
+	if totalStock.Valid {
+		log.Printf("   📋 Total Stock Quantity: %d", totalStock.Int64)
+	}
+
+	// Low stock items
+	var lowStockCount int
+	db.QueryRow("SELECT COUNT(*) FROM inventory_items WHERE quantity_available <= reorder_level").Scan(&lowStockCount)
+	if lowStockCount > 0 {
+		log.Printf("   ⚠️  Low Stock Items: %d", lowStockCount)
+	}
+
+	// Out of stock items
+	var outOfStockCount int
+	db.QueryRow("SELECT COUNT(*) FROM inventory_items WHERE quantity_available = 0").Scan(&outOfStockCount)
+	if outOfStockCount > 0 {
+		log.Printf("   ❌ Out of Stock Items: %d", outOfStockCount)
+	}
 }
