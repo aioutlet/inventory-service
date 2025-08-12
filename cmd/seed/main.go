@@ -9,9 +9,6 @@ import (
 	"os"
 	"time"
 
-	"inventory-service/internal/config"
-	"inventory-service/pkg/database"
-
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 )
@@ -31,124 +28,52 @@ type InventoryData struct {
 	Status            string    `json:"status"`
 }
 
-func main() {
-	fmt.Println("🌱 AI Outlet - Inventory Service Data Seeder")
-	fmt.Println("==================================================")
+// Standalone database connection
+func connectDB() (*sql.DB, error) {
+	// Use environment variables or default values
+	host := getEnv("DB_HOST", "localhost")
+	port := getEnv("DB_PORT", "5432")
+	user := getEnv("DB_USER", "inventory_user")
+	password := getEnv("DB_PASSWORD", "inventory_pass")
+	dbname := getEnv("DB_NAME", "inventory_db")
+	sslmode := getEnv("DB_SSL_MODE", "disable")
 
-	var (
-		clearData = flag.Bool("clear", false, "Clear existing data before seeding")
-		jsonFile  = flag.String("file", "", "JSON file with inventory data")
-		verbose   = flag.Bool("verbose", false, "Enable verbose logging")
-		summary   = flag.Bool("summary", true, "Show summary after seeding")
-	)
-	flag.Parse()
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		host, port, user, password, dbname, sslmode)
 
-	if *verbose {
-		log.SetFlags(log.LstdFlags | log.Lshortfile)
-		log.Println("🔍 Verbose logging enabled")
-	}
-
-	// Load configuration
-	log.Println("⚙️  Loading configuration...")
-	cfg, err := config.Load()
+	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		log.Fatalf("❌ Failed to load config: %v", err)
+		return nil, fmt.Errorf("failed to open database connection: %w", err)
 	}
-	log.Println("✅ Configuration loaded successfully")
 
-	// Connect to database
-	log.Println("🔌 Connecting to database...")
-	db, err := database.Connect(cfg.Database)
-	if err != nil {
-		log.Fatalf("❌ Failed to connect to database: %v", err)
-	}
-	defer db.Close()
-	log.Println("✅ Database connected successfully")
-
-	// Test database connection
 	if err := db.Ping(); err != nil {
-		log.Fatalf("❌ Database connection test failed: %v", err)
-	}
-	log.Println("✅ Database connection verified")
-
-	// Determine which JSON file to use
-	var dataFile string
-	if *jsonFile != "" {
-		dataFile = *jsonFile
-		log.Printf("📁 Using specified file: %s", dataFile)
-	} else {
-		// Use default inventory data file
-		dataFile = "scripts/inventory-data.json"
-		log.Printf("📁 Using default file: %s", dataFile)
+		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	// Check if file exists
-	if _, err := os.Stat(dataFile); os.IsNotExist(err) {
-		log.Fatalf("❌ Data file not found: %s", dataFile)
-	}
-
-	// Load inventory data from JSON file
-	log.Printf("� Loading inventory data from: %s", dataFile)
-	inventoryItems, err := loadInventoryFromFile(dataFile)
-	if err != nil {
-		log.Fatalf("❌ Failed to load inventory data: %v", err)
-	}
-	log.Printf("✅ Loaded %d inventory items", len(inventoryItems))
-
-	// Clear existing data if requested
-	if *clearData {
-		log.Println("🧹 Clearing existing data...")
-		if err := clearExistingData(db); err != nil {
-			log.Fatalf("❌ Failed to clear existing data: %v", err)
-		}
-		log.Println("✅ Existing data cleared successfully")
-	}
-
-	// Seed data
-	log.Printf("🌱 Seeding %d inventory items...", len(inventoryItems))
-	if err := seedInventoryData(db, inventoryItems, *verbose); err != nil {
-		log.Fatalf("❌ Failed to seed inventory data: %v", err)
-	}
-
-	log.Printf("✅ Successfully seeded %d items", len(inventoryItems))
-
-	if *summary {
-		log.Println("📊 Database Summary:")
-		printDatabaseSummary(db)
-	}
-
-	log.Println("🎉 Seeding completed successfully!")
+	return db, nil
 }
 
-func loadInventoryFromFile(filename string) ([]InventoryData, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
 	}
+	return defaultValue
+}
+
+func loadInventoryData(filename string) ([]InventoryData, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file %s: %w", filename, err)
+	}
+	defer file.Close()
 
 	var inventory []InventoryData
-	if err := json.Unmarshal(data, &inventory); err != nil {
-		return nil, err
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&inventory); err != nil {
+		return nil, fmt.Errorf("failed to decode JSON: %w", err)
 	}
 
 	return inventory, nil
-}
-
-func clearExistingData(db *sql.DB) error {
-	queries := []string{
-		"DELETE FROM stock_movements",
-		"DELETE FROM reservations",
-		"DELETE FROM inventory_items",
-		"DELETE FROM products",
-	}
-
-	for _, query := range queries {
-		if _, err := db.Exec(query); err != nil {
-			log.Printf("⚠️  Warning: %v", err)
-		}
-	}
-
-	return nil
 }
 
 func seedInventoryData(db *sql.DB, inventory []InventoryData, verbose bool) error {
@@ -158,30 +83,25 @@ func seedInventoryData(db *sql.DB, inventory []InventoryData, verbose bool) erro
 	}
 	defer tx.Rollback()
 
-	// Prepare statements
-	productStmt, err := tx.Prepare(`
-		INSERT INTO products (id, sku, name, description, price, category, is_active)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		ON CONFLICT (sku) DO UPDATE SET
-		name = EXCLUDED.name,
-		description = EXCLUDED.description,
-		price = EXCLUDED.price,
-		category = EXCLUDED.category`)
-	if err != nil {
-		return fmt.Errorf("failed to prepare product statement: %w", err)
-	}
-	defer productStmt.Close()
-
+	// Prepare statement for inventory items only (no products table)
 	inventoryStmt, err := tx.Prepare(`
-		INSERT INTO inventory_items (product_id, sku, quantity_available, quantity_reserved, 
-									reorder_level, max_stock, last_restocked)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO inventory_items (
+			id, product_id, sku, quantity_available, quantity_reserved, 
+			reorder_level, max_stock, warehouse_location, supplier, 
+			cost_price, last_restocked, status
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		ON CONFLICT (sku) DO UPDATE SET
+		product_id = EXCLUDED.product_id,
 		quantity_available = EXCLUDED.quantity_available,
 		quantity_reserved = EXCLUDED.quantity_reserved,
 		reorder_level = EXCLUDED.reorder_level,
 		max_stock = EXCLUDED.max_stock,
-		last_restocked = EXCLUDED.last_restocked`)
+		warehouse_location = EXCLUDED.warehouse_location,
+		supplier = EXCLUDED.supplier,
+		cost_price = EXCLUDED.cost_price,
+		last_restocked = EXCLUDED.last_restocked,
+		status = EXCLUDED.status`)
 	if err != nil {
 		return fmt.Errorf("failed to prepare inventory statement: %w", err)
 	}
@@ -197,34 +117,22 @@ func seedInventoryData(db *sql.DB, inventory []InventoryData, verbose bool) erro
 
 	// Insert data
 	for i, item := range inventory {
-		productID := uuid.New()
+		inventoryID := uuid.New()
 
-		// Calculate price from cost price (add 25% markup as example)
-		price := item.CostPrice * 1.25
-
-		// Insert/update product
-		_, err := productStmt.Exec(
-			productID,
-			item.ProductSKU,
-			item.ProductName,
-			fmt.Sprintf("Inventory item: %s", item.ProductName),
-			price,
-			"General", // Default category
-			true,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to insert product %s: %w", item.ProductSKU, err)
-		}
-
-		// Insert/update inventory item
-		_, err = inventoryStmt.Exec(
-			productID,
+		// Insert/update inventory item (no product table needed)
+		_, err := inventoryStmt.Exec(
+			inventoryID,
+			item.ProductID,        // MongoDB ObjectId as string
 			item.ProductSKU,
 			item.Quantity,
 			item.ReservedQuantity,
 			item.MinStockLevel,
 			item.MaxStockLevel,
+			item.WarehouseLocation,
+			item.Supplier,
+			item.CostPrice,
 			item.LastRestocked,
+			item.Status,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to insert inventory for %s: %w", item.ProductSKU, err)
@@ -233,7 +141,7 @@ func seedInventoryData(db *sql.DB, inventory []InventoryData, verbose bool) erro
 		// Insert stock movement for available quantity
 		if item.Quantity > 0 {
 			_, err = stockMovementStmt.Exec(
-				productID,
+				item.ProductID,  // MongoDB ObjectId
 				item.ProductSKU,
 				"in",
 				item.Quantity,
@@ -260,40 +168,123 @@ func seedInventoryData(db *sql.DB, inventory []InventoryData, verbose bool) erro
 	return nil
 }
 
-func printDatabaseSummary(db *sql.DB) {
-	// Count products
-	var productCount int
-	db.QueryRow("SELECT COUNT(*) FROM products").Scan(&productCount)
-	log.Printf("   📦 Products: %d", productCount)
-
-	// Count inventory items
-	var inventoryCount int
-	db.QueryRow("SELECT COUNT(*) FROM inventory_items").Scan(&inventoryCount)
-	log.Printf("   📊 Inventory Items: %d", inventoryCount)
-
-	// Count stock movements
-	var movementCount int
-	db.QueryRow("SELECT COUNT(*) FROM stock_movements").Scan(&movementCount)
-	log.Printf("   📈 Stock Movements: %d", movementCount)
-
-	// Total stock quantity
-	var totalStock sql.NullInt64
-	db.QueryRow("SELECT SUM(quantity_available) FROM inventory_items").Scan(&totalStock)
-	if totalStock.Valid {
-		log.Printf("   📋 Total Stock Quantity: %d", totalStock.Int64)
+func clearExistingData(db *sql.DB, verbose bool) error {
+	if verbose {
+		log.Println("🧹 Clearing existing data...")
 	}
 
-	// Low stock items
-	var lowStockCount int
-	db.QueryRow("SELECT COUNT(*) FROM inventory_items WHERE quantity_available <= reorder_level").Scan(&lowStockCount)
-	if lowStockCount > 0 {
-		log.Printf("   ⚠️  Low Stock Items: %d", lowStockCount)
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Clear in order to respect foreign key constraints
+	tables := []string{"stock_movements", "reservations", "inventory_items"}
+	
+	for _, table := range tables {
+		_, err := tx.Exec(fmt.Sprintf("DELETE FROM %s", table))
+		if err != nil {
+			return fmt.Errorf("failed to clear table %s: %w", table, err)
+		}
+		if verbose {
+			log.Printf("   ✓ Cleared table: %s", table)
+		}
 	}
 
-	// Out of stock items
-	var outOfStockCount int
-	db.QueryRow("SELECT COUNT(*) FROM inventory_items WHERE quantity_available = 0").Scan(&outOfStockCount)
-	if outOfStockCount > 0 {
-		log.Printf("   ❌ Out of Stock Items: %d", outOfStockCount)
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit clear transaction: %w", err)
 	}
+
+	return nil
+}
+
+func main() {
+	fmt.Println("🌱 AI Outlet - Inventory Service Data Seeder (Standalone)")
+	fmt.Println("=========================================================")
+
+	var (
+		clearData = flag.Bool("clear", false, "Clear existing data before seeding")
+		jsonFile  = flag.String("file", "", "JSON file with inventory data")
+		verbose   = flag.Bool("verbose", false, "Enable verbose logging")
+		summary   = flag.Bool("summary", true, "Show summary after seeding")
+	)
+	flag.Parse()
+
+	if *verbose {
+		log.SetFlags(log.LstdFlags | log.Lshortfile)
+		log.Println("🔍 Verbose logging enabled")
+	}
+
+	// Connect to database
+	db, err := connectDB()
+	if err != nil {
+		log.Fatalf("❌ Database connection failed: %v", err)
+	}
+	defer db.Close()
+
+	if *verbose {
+		log.Println("✅ Database connection established")
+	}
+
+	// Clear data if requested
+	if *clearData {
+		if err := clearExistingData(db, *verbose); err != nil {
+			log.Fatalf("❌ Failed to clear existing data: %v", err)
+		}
+		fmt.Println("🧹 Existing data cleared successfully")
+	}
+
+	// Determine data source
+	var inventory []InventoryData
+	if *jsonFile != "" {
+		if *verbose {
+			log.Printf("📂 Loading data from file: %s", *jsonFile)
+		}
+		inventory, err = loadInventoryData(*jsonFile)
+		if err != nil {
+			log.Fatalf("❌ Failed to load data from file: %v", err)
+		}
+	} else {
+		// Default to scripts/inventory-data.json
+		defaultFile := "scripts/inventory-data.json"
+		if *verbose {
+			log.Printf("📂 Loading data from default file: %s", defaultFile)
+		}
+		inventory, err = loadInventoryData(defaultFile)
+		if err != nil {
+			log.Fatalf("❌ Failed to load data from default file: %v", err)
+		}
+	}
+
+	if len(inventory) == 0 {
+		log.Fatalf("❌ No inventory data found to seed")
+	}
+
+	if *verbose {
+		log.Printf("📦 Found %d inventory items to seed", len(inventory))
+	}
+
+	// Seed the data
+	fmt.Printf("🌱 Seeding %d inventory items...\n", len(inventory))
+	if err := seedInventoryData(db, inventory, *verbose); err != nil {
+		log.Fatalf("❌ Failed to seed inventory data: %v", err)
+	}
+
+	fmt.Println("✅ Inventory data seeded successfully!")
+
+	// Show summary if requested
+	if *summary {
+		var totalItems, totalStock int
+		err := db.QueryRow("SELECT COUNT(*), COALESCE(SUM(quantity_available), 0) FROM inventory_items").Scan(&totalItems, &totalStock)
+		if err != nil {
+			log.Printf("⚠️  Failed to get summary: %v", err)
+		} else {
+			fmt.Printf("\n📊 Summary:\n")
+			fmt.Printf("   • Total inventory items: %d\n", totalItems)
+			fmt.Printf("   • Total stock quantity: %d\n", totalStock)
+		}
+	}
+
+	fmt.Println("\n🎉 Seeding completed successfully!")
 }

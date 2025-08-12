@@ -1,6 +1,6 @@
 [
   {
-    "product_id": "1",
+    "product_id": "66b9f1a2e8c4d5f6a7b8c9d0",
     "product_sku": "APL-IPH15-PRO-128",
     "product_name": "iPhone 15 Pro",
     "quantity": 45,
@@ -14,7 +14,7 @@
     "status": "in_stock"
   },
   {
-    "product_id": "2",
+    "product_id": "66b9f1a2e8c4d5f6a7b8c9d1",
     "product_sku": "SAM-GS24-ULTRA-256",
     "product_name": "Samsung Galaxy S24 Ultra",
     "quantity": 32,
@@ -28,7 +28,7 @@
     "status": "in_stock"
   },
   {
-    "product_id": "3",
+    "product_id": "66b9f1a2e8c4d5f6a7b8c9d2",
     "product_sku": "APL-MBA-M3-13",
     "product_name": "MacBook Air M3",
     "quantity": 25,
@@ -42,7 +42,7 @@
     "status": "in_stock"
   },
   {
-    "product_id": "4",
+    "product_id": "66b9f1a2e8c4d5f6a7b8c9d3",
     "product_sku": "DELL-XPS13-PLUS-I7",
     "product_name": "Dell XPS 13 Plus",
     "quantity": 18,
@@ -56,7 +56,7 @@
     "status": "in_stock"
   },
   {
-    "product_id": "5",
+    "product_id": "66b9f1a2e8c4d5f6a7b8c9d4",
     "product_sku": "APL-IPAD-PRO-M4-12",
     "product_name": "iPad Pro 12.9-inch M4",
     "quantity": 28,
@@ -70,7 +70,7 @@
     "status": "in_stock"
   },
   {
-    "product_id": "6",
+    "product_id": "66b9f1a2e8c4d5f6a7b8c9d5",
     "product_sku": "SONY-WH1000XM5-BLK",
     "product_name": "Sony WH-1000XM5",
     "quantity": 65,
@@ -84,7 +84,7 @@
     "status": "in_stock"
   },
   {
-    "product_id": "7",
+    "product_id": "66b9f1a2e8c4d5f6a7b8c9d6",
     "product_sku": "AIRP-PRO2-USBC",
     "product_name": "AirPods Pro (2nd generation)",
     "quantity": 85,
@@ -98,7 +98,7 @@
     "status": "in_stock"
   },
   {
-    "product_id": "8",
+    "product_id": "66b9f1a2e8c4d5f6a7b8c9d7",
     "product_sku": "LG-OLED55C4",
     "product_name": "LG C4 55-inch OLED TV",
     "quantity": 12,
@@ -112,7 +112,7 @@
     "status": "in_stock"
   },
   {
-    "product_id": "9",
+    "product_id": "66b9f1a2e8c4d5f6a7b8c9d8",
     "product_sku": "DYSON-V15-DETECT",
     "product_name": "Dyson V15 Detect",
     "quantity": 22,
@@ -126,7 +126,7 @@
     "status": "in_stock"
   },
   {
-    "product_id": "10",
+    "product_id": "66b9f1a2e8c4d5f6a7b8c9d9",
     "product_sku": "NINTENDO-SWITCH-OLED",
     "product_name": "Nintendo Switch OLED",
     "quantity": 35,
@@ -140,7 +140,7 @@
     "status": "in_stock"
   },
   {
-    "product_id": "11",
+    "product_id": "66b9f1a2e8c4d5f6a7b8c9da",
     "product_sku": "TEST-LOW-STOCK",
     "product_name": "Test Low Stock Item",
     "quantity": 2,
@@ -154,7 +154,7 @@
     "status": "low_stock"
   },
   {
-    "product_id": "12",
+    "product_id": "66b9f1a2e8c4d5f6a7b8c9db",
     "product_sku": "TEST-OUT-OF-STOCK",
     "product_name": "Test Out of Stock Item",
     "quantity": 0,
