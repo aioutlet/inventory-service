@@ -12,6 +12,7 @@ import (
 
 	"inventory-service/internal/api"
 	"inventory-service/internal/config"
+	"inventory-service/internal/middleware"
 	"inventory-service/internal/repository"
 	"inventory-service/internal/service"
 	"inventory-service/pkg/database"
@@ -72,6 +73,7 @@ func main() {
 
 	router := gin.New()
 	router.Use(gin.Recovery())
+	router.Use(middleware.CorrelationIDMiddleware()) // Add correlation ID middleware
 	
 	// Custom logging middleware
 	router.Use(func(c *gin.Context) {
