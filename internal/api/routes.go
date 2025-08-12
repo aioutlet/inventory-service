@@ -1,8 +1,6 @@
 package api
 
 import (
-	"net/http"
-
 	"inventory-service/internal/logger"
 	"inventory-service/internal/service"
 
@@ -10,13 +8,12 @@ import (
 )
 
 func SetupRoutes(router *gin.Engine, inventoryService service.InventoryService, standardLogger *logger.StandardLogger) {
-	// Health check
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status": "healthy",
-			"service": "inventory-service",
-		})
-	})
+	// Operational endpoints for infrastructure/monitoring
+	operationalController := NewOperationalController()
+	router.GET("/health", operationalController.Health)
+	router.GET("/health/ready", operationalController.Readiness)
+	router.GET("/health/live", operationalController.Liveness)
+	router.GET("/metrics", operationalController.Metrics)
 	
 	// API v1 routes
 	v1 := router.Group("/api/v1")

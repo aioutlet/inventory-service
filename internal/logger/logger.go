@@ -371,3 +371,8 @@ func (l *StandardLogger) Performance(operation string, duration int64, c *gin.Co
 		l.Info(message, c, metadata)
 	}
 }
+
+// GetLogrusLogger returns the underlying logrus.Logger for compatibility with services that expect logrus
+func (l *StandardLogger) GetLogrusLogger() *logrus.Logger {
+	return l.logger
+}

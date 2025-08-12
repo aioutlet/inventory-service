@@ -62,7 +62,7 @@ func main() {
 	reservationRepo := repository.NewReservationRepository(db)
 
 	// Initialize services
-	inventoryService := service.NewInventoryService(inventoryRepo, reservationRepo, redisClient, standardLogger)
+	inventoryService := service.NewInventoryService(inventoryRepo, reservationRepo, redisClient, standardLogger.GetLogrusLogger())
 
 	// Initialize HTTP server
 	if cfg.Environment == "production" {
