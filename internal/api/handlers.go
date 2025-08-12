@@ -4,20 +4,20 @@ import (
 	"net/http"
 	"strconv"
 
+	"inventory-service/internal/logger"
 	"inventory-service/internal/models"
 	"inventory-service/internal/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 )
 
 type StockHandler struct {
 	service service.InventoryService
-	logger  *logrus.Logger
+	logger  *logger.StandardLogger
 }
 
-func NewStockHandler(service service.InventoryService, logger *logrus.Logger) *StockHandler {
+func NewStockHandler(service service.InventoryService, logger *logger.StandardLogger) *StockHandler {
 	return &StockHandler{
 		service: service,
 		logger:  logger,
@@ -25,9 +25,16 @@ func NewStockHandler(service service.InventoryService, logger *logrus.Logger) *S
 }
 
 func (h *StockHandler) CheckStock(c *gin.Context) {
+	startTime := h.logger.OperationStart("stock_check", c, map[string]interface{}{
+		"operation": "stock_check",
+	})
+	
 	var request models.StockCheckRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		h.logger.Errorf("Invalid stock check request: %v", err)
+		h.logger.Error("Invalid stock check request", c, map[string]interface{}{
+			"operation": "stock_check",
+			"error": err.Error(),
+		})
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request format",
 			"details": err.Error(),
@@ -37,20 +44,34 @@ func (h *StockHandler) CheckStock(c *gin.Context) {
 	
 	response, err := h.service.CheckStock(request.Items)
 	if err != nil {
-		h.logger.Errorf("Failed to check stock: %v", err)
+		h.logger.OperationFailed("stock_check", startTime, err, c, map[string]interface{}{
+			"operation": "stock_check",
+			"items_count": len(request.Items),
+		})
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to check stock availability",
 		})
 		return
 	}
 	
+	h.logger.OperationComplete("stock_check", startTime, c, map[string]interface{}{
+		"items_checked": len(request.Items),
+		"available_items": len(response.Items),
+	})
 	c.JSON(http.StatusOK, response)
 }
 
 func (h *StockHandler) ReserveStock(c *gin.Context) {
+	startTime := h.logger.OperationStart("stock_reserve", c, map[string]interface{}{
+		"operation": "stock_reserve",
+	})
+	
 	var request models.ReserveStockRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		h.logger.Errorf("Invalid reserve stock request: %v", err)
+		h.logger.Error("Invalid reserve stock request", c, map[string]interface{}{
+			"operation": "stock_reserve",
+			"error": err.Error(),
+		})
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request format",
 			"details": err.Error(),
@@ -60,7 +81,11 @@ func (h *StockHandler) ReserveStock(c *gin.Context) {
 	
 	response, err := h.service.ReserveStock(request.OrderID, request.Items)
 	if err != nil {
-		h.logger.Errorf("Failed to reserve stock: %v", err)
+		h.logger.OperationFailed("stock_reserve", startTime, err, c, map[string]interface{}{
+			"operation": "stock_reserve",
+			"order_id": request.OrderID,
+			"items_count": len(request.Items),
+		})
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to reserve stock",
 		})
@@ -68,16 +93,33 @@ func (h *StockHandler) ReserveStock(c *gin.Context) {
 	}
 	
 	if response.Success {
+		h.logger.OperationComplete("stock_reserve", startTime, c, map[string]interface{}{
+			"order_id": request.OrderID,
+			"items_reserved": len(request.Items),
+			"success": true,
+		})
 		c.JSON(http.StatusOK, response)
 	} else {
+		h.logger.Warn("Stock reservation failed - insufficient inventory", c, map[string]interface{}{
+			"order_id": request.OrderID,
+			"items_count": len(request.Items),
+			"success": false,
+		})
 		c.JSON(http.StatusConflict, response)
 	}
 }
 
 func (h *StockHandler) UpdateStock(c *gin.Context) {
+	startTime := h.logger.OperationStart("stock_update", c, map[string]interface{}{
+		"operation": "stock_update",
+	})
+	
 	var request models.UpdateStockRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		h.logger.Errorf("Invalid update stock request: %v", err)
+		h.logger.Error("Invalid update stock request", c, map[string]interface{}{
+			"operation": "stock_update",
+			"error": err.Error(),
+		})
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request format",
 			"details": err.Error(),
@@ -87,12 +129,24 @@ func (h *StockHandler) UpdateStock(c *gin.Context) {
 	
 	err := h.service.UpdateStock(request.SKU, request.Quantity, request.Type, "", request.Reason)
 	if err != nil {
-		h.logger.Errorf("Failed to update stock: %v", err)
+		h.logger.OperationFailed("stock_update", startTime, err, c, map[string]interface{}{
+			"operation": "stock_update",
+			"sku": request.SKU,
+			"quantity": request.Quantity,
+			"type": request.Type,
+		})
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to update stock",
 		})
 		return
 	}
+	
+	h.logger.OperationComplete("stock_update", startTime, c, map[string]interface{}{
+		"sku": request.SKU,
+		"quantity": request.Quantity,
+		"type": request.Type,
+		"reason": request.Reason,
+	})
 	
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Stock updated successfully",
@@ -104,10 +158,10 @@ func (h *StockHandler) UpdateStock(c *gin.Context) {
 
 type ReservationHandler struct {
 	service service.InventoryService
-	logger  *logrus.Logger
+	logger  *logger.StandardLogger
 }
 
-func NewReservationHandler(service service.InventoryService, logger *logrus.Logger) *ReservationHandler {
+func NewReservationHandler(service service.InventoryService, logger *logger.StandardLogger) *ReservationHandler {
 	return &ReservationHandler{
 		service: service,
 		logger:  logger,
@@ -126,12 +180,21 @@ func (h *ReservationHandler) ConfirmReservation(c *gin.Context) {
 	
 	err = h.service.ConfirmReservation(reservationID)
 	if err != nil {
-		h.logger.Errorf("Failed to confirm reservation %s: %v", reservationID, err)
+		h.logger.Error("Failed to confirm reservation", c, map[string]interface{}{
+			"operation": "confirm_reservation",
+			"reservation_id": reservationID,
+			"error": err.Error(),
+		})
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to confirm reservation",
 		})
 		return
 	}
+	
+	h.logger.Info("Reservation confirmed successfully", c, map[string]interface{}{
+		"operation": "confirm_reservation",
+		"reservation_id": reservationID,
+	})
 	
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Reservation confirmed successfully",
@@ -151,12 +214,21 @@ func (h *ReservationHandler) ReleaseReservation(c *gin.Context) {
 	
 	err = h.service.ReleaseReservation(reservationID)
 	if err != nil {
-		h.logger.Errorf("Failed to release reservation %s: %v", reservationID, err)
+		h.logger.Error("Failed to release reservation", c, map[string]interface{}{
+			"operation": "release_reservation",
+			"reservation_id": reservationID,
+			"error": err.Error(),
+		})
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to release reservation",
 		})
 		return
 	}
+	
+	h.logger.Info("Reservation released successfully", c, map[string]interface{}{
+		"operation": "release_reservation",
+		"reservation_id": reservationID,
+	})
 	
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Reservation released successfully",
@@ -176,7 +248,11 @@ func (h *ReservationHandler) GetReservation(c *gin.Context) {
 	
 	reservation, err := h.service.GetReservation(reservationID)
 	if err != nil {
-		h.logger.Errorf("Failed to get reservation %s: %v", reservationID, err)
+		h.logger.Error("Failed to get reservation", c, map[string]interface{}{
+			"operation": "get_reservation",
+			"reservation_id": reservationID,
+			"error": err.Error(),
+		})
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Reservation not found",
 		})
@@ -198,7 +274,11 @@ func (h *ReservationHandler) GetReservationsByOrderID(c *gin.Context) {
 	
 	reservations, err := h.service.GetReservationsByOrderID(orderID)
 	if err != nil {
-		h.logger.Errorf("Failed to get reservations for order %s: %v", orderID, err)
+		h.logger.Error("Failed to get reservations for order", c, map[string]interface{}{
+			"operation": "get_reservations_by_order",
+			"order_id": orderID,
+			"error": err.Error(),
+		})
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to get reservations",
 		})
@@ -213,10 +293,10 @@ func (h *ReservationHandler) GetReservationsByOrderID(c *gin.Context) {
 
 type InventoryHandler struct {
 	service service.InventoryService
-	logger  *logrus.Logger
+	logger  *logger.StandardLogger
 }
 
-func NewInventoryHandler(service service.InventoryService, logger *logrus.Logger) *InventoryHandler {
+func NewInventoryHandler(service service.InventoryService, logger *logger.StandardLogger) *InventoryHandler {
 	return &InventoryHandler{
 		service: service,
 		logger:  logger,
@@ -234,7 +314,11 @@ func (h *InventoryHandler) GetInventoryBySKU(c *gin.Context) {
 	
 	item, err := h.service.GetInventoryBySKU(sku)
 	if err != nil {
-		h.logger.Errorf("Failed to get inventory for SKU %s: %v", sku, err)
+		h.logger.Error("Failed to get inventory for SKU", c, map[string]interface{}{
+			"operation": "get_inventory_by_sku",
+			"sku": sku,
+			"error": err.Error(),
+		})
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Inventory item not found",
 		})
@@ -256,7 +340,11 @@ func (h *InventoryHandler) GetInventoryByProductID(c *gin.Context) {
 	
 	item, err := h.service.GetInventoryByProductID(productID)
 	if err != nil {
-		h.logger.Errorf("Failed to get inventory for product %s: %v", productID, err)
+		h.logger.Error("Failed to get inventory for product", c, map[string]interface{}{
+			"operation": "get_inventory_by_product",
+			"product_id": productID,
+			"error": err.Error(),
+		})
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Inventory item not found",
 		})
@@ -293,7 +381,13 @@ func (h *InventoryHandler) SearchInventory(c *gin.Context) {
 	
 	items, err := h.service.SearchInventory(query, limit, offset)
 	if err != nil {
-		h.logger.Errorf("Failed to search inventory: %v", err)
+		h.logger.Error("Failed to search inventory", c, map[string]interface{}{
+			"operation": "search_inventory",
+			"query": query,
+			"limit": limit,
+			"offset": offset,
+			"error": err.Error(),
+		})
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to search inventory",
 		})
@@ -311,7 +405,10 @@ func (h *InventoryHandler) SearchInventory(c *gin.Context) {
 func (h *InventoryHandler) GetLowStockItems(c *gin.Context) {
 	items, err := h.service.GetLowStockItems()
 	if err != nil {
-		h.logger.Errorf("Failed to get low stock items: %v", err)
+		h.logger.Error("Failed to get low stock items", c, map[string]interface{}{
+			"operation": "get_low_stock_items",
+			"error": err.Error(),
+		})
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to get low stock items",
 		})
@@ -326,10 +423,10 @@ func (h *InventoryHandler) GetLowStockItems(c *gin.Context) {
 
 type AdminHandler struct {
 	service service.InventoryService
-	logger  *logrus.Logger
+	logger  *logger.StandardLogger
 }
 
-func NewAdminHandler(service service.InventoryService, logger *logrus.Logger) *AdminHandler {
+func NewAdminHandler(service service.InventoryService, logger *logger.StandardLogger) *AdminHandler {
 	return &AdminHandler{
 		service: service,
 		logger:  logger,
@@ -337,14 +434,24 @@ func NewAdminHandler(service service.InventoryService, logger *logrus.Logger) *A
 }
 
 func (h *AdminHandler) ProcessExpiredReservations(c *gin.Context) {
+	startTime := h.logger.OperationStart("process_expired_reservations", c, map[string]interface{}{
+		"operation": "process_expired_reservations",
+	})
+	
 	err := h.service.ProcessExpiredReservations()
 	if err != nil {
-		h.logger.Errorf("Failed to process expired reservations: %v", err)
+		h.logger.OperationFailed("process_expired_reservations", startTime, err, c, map[string]interface{}{
+			"operation": "process_expired_reservations",
+		})
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to process expired reservations",
 		})
 		return
 	}
+	
+	h.logger.OperationComplete("process_expired_reservations", startTime, c, map[string]interface{}{
+		"operation": "process_expired_reservations",
+	})
 	
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Expired reservations processed successfully",
@@ -352,14 +459,24 @@ func (h *AdminHandler) ProcessExpiredReservations(c *gin.Context) {
 }
 
 func (h *AdminHandler) CleanupOldReservations(c *gin.Context) {
+	startTime := h.logger.OperationStart("cleanup_old_reservations", c, map[string]interface{}{
+		"operation": "cleanup_old_reservations",
+	})
+	
 	err := h.service.CleanupOldReservations()
 	if err != nil {
-		h.logger.Errorf("Failed to cleanup old reservations: %v", err)
+		h.logger.OperationFailed("cleanup_old_reservations", startTime, err, c, map[string]interface{}{
+			"operation": "cleanup_old_reservations",
+		})
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to cleanup old reservations",
 		})
 		return
 	}
+	
+	h.logger.OperationComplete("cleanup_old_reservations", startTime, c, map[string]interface{}{
+		"operation": "cleanup_old_reservations",
+	})
 	
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Old reservations cleaned up successfully",

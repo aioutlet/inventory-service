@@ -12,6 +12,7 @@ import (
 
 	"inventory-service/internal/api"
 	"inventory-service/internal/config"
+	"inventory-service/internal/logger"
 	"inventory-service/internal/middleware"
 	"inventory-service/internal/repository"
 	"inventory-service/internal/service"
@@ -19,7 +20,6 @@ import (
 	"inventory-service/pkg/redis"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -30,32 +30,30 @@ func main() {
 	}
 
 	// Setup logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.Level(cfg.LogLevel))
-	if cfg.Environment == "production" {
-		logger.SetFormatter(&logrus.JSONFormatter{})
-	} else {
-		logger.SetFormatter(&logrus.TextFormatter{
-			FullTimestamp: true,
-		})
-	}
+	standardLogger := logger.NewStandardLogger()
 
 	// Initialize database
 	db, err := database.Connect(cfg.Database)
 	if err != nil {
-		logger.Fatalf("Failed to connect to database: %v", err)
+		standardLogger.Fatal("Failed to connect to database", nil, map[string]interface{}{
+			"error": err.Error(),
+		})
 	}
 	defer db.Close()
 
 	// Run migrations
 	if err := database.Migrate(cfg.Database); err != nil {
-		logger.Fatalf("Failed to run migrations: %v", err)
+		standardLogger.Fatal("Failed to run migrations", nil, map[string]interface{}{
+			"error": err.Error(),
+		})
 	}
 
 	// Initialize Redis
 	redisClient, err := redis.Connect(cfg.Redis)
 	if err != nil {
-		logger.Fatalf("Failed to connect to Redis: %v", err)
+		standardLogger.Fatal("Failed to connect to Redis", nil, map[string]interface{}{
+			"error": err.Error(),
+		})
 	}
 	defer redisClient.Close()
 
@@ -64,7 +62,7 @@ func main() {
 	reservationRepo := repository.NewReservationRepository(db)
 
 	// Initialize services
-	inventoryService := service.NewInventoryService(inventoryRepo, reservationRepo, redisClient, logger)
+	inventoryService := service.NewInventoryService(inventoryRepo, reservationRepo, redisClient, standardLogger)
 
 	// Initialize HTTP server
 	if cfg.Environment == "production" {
@@ -80,18 +78,20 @@ func main() {
 		start := time.Now()
 		c.Next()
 		
-		logger.WithFields(logrus.Fields{
+		duration := time.Since(start).Milliseconds()
+		
+		standardLogger.Info("HTTP request", c, map[string]interface{}{
 			"method":     c.Request.Method,
 			"path":       c.Request.URL.Path,
 			"status":     c.Writer.Status(),
-			"duration":   time.Since(start),
+			"duration":   duration,
 			"ip":         c.ClientIP(),
-			"user_agent": c.Request.UserAgent(),
-		}).Info("HTTP request")
+			"userAgent":  c.Request.UserAgent(),
+		})
 	})
 
 	// Setup routes
-	api.SetupRoutes(router, inventoryService, logger)
+	api.SetupRoutes(router, inventoryService, standardLogger)
 
 	// Create server
 	srv := &http.Server{
@@ -101,9 +101,13 @@ func main() {
 
 	// Start server in goroutine
 	go func() {
-		logger.Infof("Starting server on port %d", cfg.Server.Port)
+		standardLogger.Info("Starting server", nil, map[string]interface{}{
+			"port": cfg.Server.Port,
+		})
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatalf("Failed to start server: %v", err)
+			standardLogger.Fatal("Failed to start server", nil, map[string]interface{}{
+				"error": err.Error(),
+			})
 		}
 	}()
 
@@ -111,15 +115,17 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	logger.Info("Shutting down server...")
+	standardLogger.Info("Shutting down server", nil, nil)
 
 	// Graceful shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	
 	if err := srv.Shutdown(ctx); err != nil {
-		logger.Fatalf("Server forced to shutdown: %v", err)
+		standardLogger.Fatal("Server forced to shutdown", nil, map[string]interface{}{
+			"error": err.Error(),
+		})
 	}
 
-	logger.Info("Server exited")
+	standardLogger.Info("Server exited", nil, nil)
 }
