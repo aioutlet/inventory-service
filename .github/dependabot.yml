@@ -1,0 +1,101 @@
+# Dependabot configuration for inventory-service
+# This configuration will automatically check for dependency updates
+# and create pull requests when new versions are available.
+#
+# For more information, see:
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+
+version: 2
+updates:
+  # Enable version updates for Go modules
+  - package-ecosystem: 'gomod'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'Etc/UTC'
+    open-pull-requests-limit: 10
+    assignees:
+      - 'inventory-service-team'
+    commit-message:
+      prefix: 'deps'
+      include: 'scope'
+    labels:
+      - 'dependencies'
+    # Group related updates together to reduce PR noise
+    groups:
+      # Group Gin web framework related updates
+      gin-ecosystem:
+        patterns:
+          - 'github.com/gin-gonic/gin'
+          - 'github.com/gin-contrib/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+      # Group database-related updates
+      database-ecosystem:
+        patterns:
+          - 'github.com/lib/pq'
+          - 'github.com/golang-migrate/migrate*'
+        update-types:
+          - 'minor'
+          - 'patch'
+      # Group Redis-related updates
+      redis-ecosystem:
+        patterns:
+          - 'github.com/redis/go-redis*'
+        update-types:
+          - 'minor'
+          - 'patch'
+      # Group testing-related updates
+      testing-ecosystem:
+        patterns:
+          - 'github.com/stretchr/testify'
+        update-types:
+          - 'minor'
+          - 'patch'
+      # Group logging and utilities
+      utilities:
+        patterns:
+          - 'github.com/sirupsen/logrus'
+          - 'github.com/google/uuid'
+          - 'github.com/joho/godotenv'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+  # Enable version updates for Docker
+  - package-ecosystem: 'docker'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'Etc/UTC'
+    open-pull-requests-limit: 5
+    assignees:
+      - 'inventory-service-team'
+    commit-message:
+      prefix: 'docker'
+      include: 'scope'
+    labels:
+      - 'docker'
+      - 'infrastructure'
+
+  # Enable version updates for GitHub Actions (if any workflows are added later)
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'monthly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'Etc/UTC'
+    open-pull-requests-limit: 5
+    assignees:
+      - 'inventory-service-team'
+    commit-message:
+      prefix: 'ci'
+      include: 'scope'
+    labels:
+      - 'github-actions'
