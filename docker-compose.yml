@@ -1,59 +1,69 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: inventory_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-    ports:
-      - '5432:5432'
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - '6379:6379'
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   inventory-service:
     build: .
+    container_name: inventory-service-docker
+    restart: unless-stopped
     ports:
-      - '8080:8080'
+      - '3004:8080'
     environment:
-      ENVIRONMENT: development
-      LOG_LEVEL: 4
-      PORT: 8080
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: password
-      DB_NAME: inventory_db
-      DB_SSL_MODE: disable
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ''
-      REDIS_DB: 0
+      - ENVIRONMENT=development
+      - LOG_LEVEL=4
+      - SERVER_PORT=8080
+      - GIN_MODE=debug
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=inventory_dev_pass_123
+      - DB_NAME=inventory_db
+      - DB_SSL_MODE=disable
+      - REDIS_HOST=aioutlet-redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=redis_dev_pass_123
+      - REDIS_DB=0
+      - JWT_SECRET=inventory_service_jwt_dev_secret_123
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
+    networks:
+      - inventory-network
+      - aioutlet-network # Connect to infrastructure network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8080/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: inventory-postgres-docker
     restart: unless-stopped
+    environment:
+      - POSTGRES_DB=inventory_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=inventory_dev_pass_123
+    ports:
+      - '5435:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d inventory_db']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - inventory-network
 
 volumes:
   postgres_data:
-  redis_data:
+
+networks:
+  inventory-network:
+    driver: bridge
+  aioutlet-network:
+    external: true
+    name: aioutlet-network

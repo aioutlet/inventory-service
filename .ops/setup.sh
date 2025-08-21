@@ -8,27 +8,18 @@ set -e
 SERVICE_NAME="inventory-service"
 SERVICE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# Default environment
-ENV_NAME="development"
-
-# Parse command line arguments
+# Parse command line arguments (simplified - only help)
 while [[ $# -gt 0 ]]; do
     case $1 in
-        -e|--env)
-            ENV_NAME="$2"
-            shift 2
-            ;;
         -h|--help)
             echo "Usage: $0 [options]"
-            echo "Options:"
-            echo "  -e, --env ENV_NAME    Environment name (default: development)"
-            echo "                        Looks for .env.ENV_NAME file"
-            echo "  -h, --help           Show this help message"
             echo ""
-            echo "Examples:"
-            echo "  $0                   # Uses .env (development)"
-            echo "  $0 -e production     # Uses .env.production"
-            echo "  $0 -e staging        # Uses .env.staging"
+            echo "This script sets up the inventory service for development."
+            echo "Uses .env file for configuration (Go standard)."
+            echo "Database and dependencies are managed via Docker Compose."
+            echo ""
+            echo "Options:"
+            echo "  -h, --help           Show this help message"
             exit 0
             ;;
         *)
@@ -39,7 +30,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo "🚀 Setting up $SERVICE_NAME for $ENV_NAME environment..."
+echo "🚀 Setting up $SERVICE_NAME for development..."
 
 # Color codes for output
 RED='\033[0;31m'
@@ -82,63 +73,22 @@ detect_os() {
     fi
 }
 
-# Function to load environment variables from .env file
+# Function to load environment variables from .env file (Go standard)
+# Note: This function is kept for reference but not used during setup
+# The actual Go application will load these variables when it runs
 load_env_file() {
-    local env_file=""
+    local env_file="$SERVICE_PATH/.env"
     
-    if [ "$ENV_NAME" = "development" ]; then
-        env_file="$SERVICE_PATH/.env.development"
-    else
-        env_file="$SERVICE_PATH/.env.$ENV_NAME"
-    fi
-    
-    log_info "Loading environment variables from $(basename $env_file)..."
+    log_info "Environment file ready at: .env (Go standard)"
+    log_info "The Go application will load these variables at runtime"
     
     if [ ! -f "$env_file" ]; then
-        log_error "Environment file not found: $env_file"
-        log_info "Available environment files:"
-        ls -la "$SERVICE_PATH"/.env* 2>/dev/null || log_info "No .env files found"
-        exit 1
+        log_warning "Environment file not found: $env_file"
+        log_info "Run setup to create the template"
+        return 1
     fi
     
-    # Load environment variables safely
-    set -a  # automatically export all variables
-    
-    # Source the file while filtering out comments and empty lines
-    while IFS= read -r line || [ -n "$line" ]; do
-        # Skip empty lines and comments
-        if [[ -n "$line" && ! "$line" =~ ^[[:space:]]*# ]]; then
-            # Export the variable if it contains an equals sign
-            if [[ "$line" =~ ^[^=]+= ]]; then
-                export "$line"
-            fi
-        fi
-    done < "$env_file"
-    
-    set +a  # stop automatically exporting
-    
-    log_success "Environment variables loaded from $(basename $env_file)"
-    
-    # Validate required variables
-    local required_vars=("DB_NAME" "DB_USER" "DB_PASSWORD" "SERVER_PORT" "GIN_MODE")
-    local missing_vars=()
-    
-    for var in "${required_vars[@]}"; do
-        if [ -z "${!var}" ]; then
-            missing_vars+=("$var")
-        fi
-    done
-    
-    if [ ${#missing_vars[@]} -ne 0 ]; then
-        log_error "Missing required environment variables: ${missing_vars[*]}"
-        log_info "Please ensure these variables are set in $env_file"
-        exit 1
-    fi
-    
-    log_info "Environment: $GIN_MODE"
-    log_info "Port: $SERVER_PORT"
-    log_info "Database: $DB_NAME"
-    log_info "Database User: $DB_USER"
+    log_success "Environment configuration is ready for Go application"
 }
 
 # Check for Go
@@ -207,27 +157,24 @@ build_application() {
 
 # Setup database
 setup_database() {
+    local DB_NAME="inventory_db"
+    local DB_USER="postgres"  
+    local DB_PASSWORD="inventory_dev_pass_123"
+    local DB_HOST="localhost"
+    
     log_info "Setting up database: $DB_NAME"
     
     # Check if database exists and create if not
-    if ! psql -h ${DB_HOST:-localhost} -U postgres -lqt | cut -d \| -f 1 | grep -qw "$DB_NAME"; then
+    if ! psql -h $DB_HOST -U postgres -lqt | cut -d \| -f 1 | grep -qw "$DB_NAME"; then
         log_info "Creating database: $DB_NAME"
-        createdb -h ${DB_HOST:-localhost} -U postgres "$DB_NAME"
+        createdb -h $DB_HOST -U postgres "$DB_NAME"
         log_success "Database created successfully"
     else
         log_info "Database $DB_NAME already exists"
     fi
     
-    # Create user if not exists
-    psql -h ${DB_HOST:-localhost} -U postgres -d postgres -c "
-        DO \$\$
-        BEGIN
-            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '$DB_USER') THEN
-                CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';
-            END IF;
-        END
-        \$\$;
-        
+    # Create user if not exists (using postgres superuser, so just ensure permissions)
+    psql -h $DB_HOST -U postgres -d postgres -c "
         GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;
     " > /dev/null 2>&1
     
@@ -259,11 +206,15 @@ run_database_scripts() {
 
 # Validate setup
 validate_setup() {
+    local DB_NAME="inventory_db"
+    local DB_USER="postgres"
+    local DB_HOST="localhost"
+    
     log_info "Validating setup..."
     
     # Check if we can connect to database
     if command_exists psql; then
-        if psql -h ${DB_HOST:-localhost} -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1;" > /dev/null 2>&1; then
+        if psql -h $DB_HOST -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1;" > /dev/null 2>&1; then
             log_success "Database connection successful"
         else
             log_error "Database connection failed"
@@ -282,24 +233,18 @@ validate_setup() {
     return 0
 }
 
-# Create environment file if it doesn't exist
+# Create environment file if it doesn't exist (Go standard)
 create_env_template() {
-    local env_file=""
-    
-    if [ "$ENV_NAME" = "development" ]; then
-        env_file="$SERVICE_PATH/.env.development"
-    else
-        env_file="$SERVICE_PATH/.env.$ENV_NAME"
-    fi
+    local env_file="$SERVICE_PATH/.env"
     
     if [ ! -f "$env_file" ]; then
-        log_info "Creating environment template: $(basename $env_file)"
+        log_info "Creating .env template (Go standard)"
         
         cat > "$env_file" << EOF
-# Inventory Service Environment Configuration - $ENV_NAME
+# Inventory Service Environment Configuration
 
 # Server Configuration
-GIN_MODE=$ENV_NAME
+GIN_MODE=release
 SERVER_PORT=3005
 SERVER_HOST=localhost
 
@@ -307,8 +252,8 @@ SERVER_HOST=localhost
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=inventory_db
-DB_USER=inventory_user
-DB_PASSWORD=inventory_password
+DB_USER=postgres
+DB_PASSWORD=inventory_dev_pass_123
 DB_SSL_MODE=disable
 DB_MAX_OPEN_CONNS=25
 DB_MAX_IDLE_CONNS=5
@@ -317,7 +262,7 @@ DB_CONN_MAX_LIFETIME=300s
 # Redis Configuration
 REDIS_HOST=localhost
 REDIS_PORT=6379
-REDIS_PASSWORD=
+REDIS_PASSWORD=redis_dev_pass_123
 REDIS_DB=0
 REDIS_POOL_SIZE=10
 REDIS_MIN_IDLE_CONNS=5
@@ -331,7 +276,7 @@ NOTIFICATION_SERVICE_URL=http://localhost:3008
 AUDIT_SERVICE_URL=http://localhost:3007
 
 # JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key-for-inventory-service-$ENV_NAME
+JWT_SECRET=your-super-secret-jwt-key-for-inventory-service
 JWT_TOKEN_EXPIRE=24h
 
 # Logging Configuration
@@ -382,13 +327,10 @@ main() {
     
     OS=$(detect_os)
     log_info "Detected OS: $OS"
-    log_info "Target Environment: $ENV_NAME"
+    log_info "Using Go standard .env configuration"
     
     # Create environment file if it doesn't exist
     create_env_template
-    
-    # Load environment variables
-    load_env_file
     
     # Check prerequisites
     check_go
