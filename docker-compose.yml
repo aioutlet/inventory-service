@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  inventory-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '5003:5000'
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=mysql+pymysql://inventory_user:inventory_pass@mysql_inventory:3306/inventory_db
+      - REDIS_URL=redis://redis_inventory:6379/0
+      - PRODUCT_SERVICE_URL=http://product-service:5001/api/v1
+      - CACHE_DEFAULT_TIMEOUT=300
+      - HOST=0.0.0.0
+      - PORT=5000
+    depends_on:
+      - mysql_inventory
+      - redis_inventory
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - inventory_network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:5000/api/v1/health/']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  mysql_inventory:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=inventory_db
+      - MYSQL_USER=inventory_user
+      - MYSQL_PASSWORD=inventory_pass
+    ports:
+      - '3307:3306'
+    volumes:
+      - mysql_inventory_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - inventory_network
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis_inventory:
+    image: redis:7-alpine
+    ports:
+      - '6380:6379'
+    volumes:
+      - redis_inventory_data:/data
+    networks:
+      - inventory_network
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    command: redis-server --appendonly yes
+
+  # Optional: Database administration tool
+  adminer:
+    image: adminer
+    ports:
+      - '8081:8080'
+    environment:
+      - ADMINER_DEFAULT_SERVER=mysql_inventory
+    depends_on:
+      - mysql_inventory
+    networks:
+      - inventory_network
+    profiles:
+      - tools
+
+volumes:
+  mysql_inventory_data:
+  redis_inventory_data:
+
+networks:
+  inventory_network:
+    driver: bridge
