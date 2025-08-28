@@ -1,18 +1,18 @@
 [flake8]
 max-line-length = 88
-extend-ignore = 
-    E203,  # whitespace before ':'
-    E501,  # line too long (handled by black)
-    W503,  # line break before binary operator
-    W504,  # line break after binary operator
-exclude = 
+ignore = E203, E501, E902, W503, W504
+exclude =
     .git,
     __pycache__,
-    .pytest_cache,
-    venv,
     .venv,
+    venv,
+    env,
+    .env,
+    .pytest_cache,
     instance,
     migrations,
-    .devops
-per-file-ignores =
-    __init__.py:F401  # imported but unused
+    .devops,
+    build,
+    dist,
+    .eggs,
+    *.egg
