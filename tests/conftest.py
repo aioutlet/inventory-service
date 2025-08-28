@@ -9,6 +9,12 @@ import json
 os.environ['FLASK_ENV'] = 'testing'
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['REDIS_URL'] = 'redis://localhost:6379/1'
+os.environ['JWT_SECRET'] = 'test-jwt-secret-for-testing'
+os.environ['SECRET_KEY'] = 'test-secret-key'
+
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
 
 from app import create_app
 from app.models import db, InventoryItem, Reservation, StockMovement, StockMovementType, ReservationStatus
@@ -141,9 +147,36 @@ def mock_product_service():
 def auth_headers():
     """Mock authentication headers for testing."""
     return {
-        'Authorization': 'Bearer test-token',
+        'Authorization': 'Bearer test-jwt-token-for-testing',
         'Content-Type': 'application/json'
     }
+
+
+@pytest.fixture
+def mock_auth():
+    """Mock authentication middleware for testing."""
+    with patch('app.middlewares.auth.validate_with_user_service') as mock_validate:
+        mock_validate.return_value = {
+            'id': 'test-user-id',
+            'username': 'testuser',
+            'roles': ['admin']
+        }
+        yield mock_validate
+
+
+@pytest.fixture
+def mock_requests():
+    """Mock requests module for external service calls."""
+    with patch('app.middlewares.auth.requests') as mock_requests:
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            'id': 'test-user-id',
+            'username': 'testuser',
+            'roles': ['admin']
+        }
+        mock_requests.get.return_value = mock_response
+        yield mock_requests
 
 
 # Helper functions for tests
