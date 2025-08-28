@@ -2,7 +2,7 @@
 Flask==3.0.3
 Flask-SQLAlchemy==3.1.1
 Flask-Migrate==4.0.7
-Flask-CORS==4.0.1
+Flask-CORS==6.0.0
 Flask-RESTX==1.3.0
 
 # Database
@@ -17,7 +17,7 @@ python-dotenv==1.0.1
 marshmallow==3.22.0
 
 # HTTP Client for service communication
-requests==2.32.3
+requests==2.32.4
 
 # System monitoring
 psutil==6.0.0
