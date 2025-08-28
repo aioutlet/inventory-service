@@ -7,8 +7,7 @@ A Flask-based microservice for managing product inventory.
 import os
 import logging
 from flask import Flask
-from app import create_app
-from app.models import db
+from app import create_app, db
 
 # Configure logging
 logging.basicConfig(
@@ -27,14 +26,16 @@ def main():
     # Create Flask application
     app = create_app(env)
     
-    with app.app_context():
-        # Create database tables if they don't exist
-        try:
-            db.create_all()
-            logger.info("Database tables created/verified successfully")
-        except Exception as e:
-            logger.error(f"Error creating database tables: {e}")
+    # Initialize database (this is now separate from app creation)
+    from app import init_database
+    try:
+        init_database(app)
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+        if env == 'production':
             raise
+        else:
+            logger.warning("Continuing without database in development mode")
     
     # Get host and port from environment
     host = os.environ.get('HOST', '0.0.0.0')

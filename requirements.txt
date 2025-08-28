@@ -19,6 +19,9 @@ marshmallow==3.22.0
 # HTTP Client for service communication
 requests==2.32.3
 
+# System monitoring
+psutil==6.0.0
+
 # Utilities
 uuid==1.30
 python-dateutil==2.9.0
