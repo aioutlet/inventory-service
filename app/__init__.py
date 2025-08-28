@@ -3,7 +3,6 @@ from flask_cors import CORS
 from flask_restx import Api
 import redis
 import logging
-from datetime import datetime
 
 # Initialize Redis client
 redis_client = None

@@ -3,10 +3,8 @@ Operational/Infrastructure endpoints for inventory service
 These endpoints are used by monitoring systems, load balancers, and DevOps tools
 """
 
-from flask import jsonify, current_app
 from flask_restx import Resource, Namespace
 from datetime import datetime
-import time
 import os
 import psutil
 import logging
