@@ -15,6 +15,7 @@ from app.utils.health_checks import (
     perform_liveness_check, 
     get_system_metrics
 )
+from app.services import InventoryService
 
 logger = logging.getLogger(__name__)
 
@@ -24,14 +25,40 @@ operational_ns = Namespace('operational', description='Operational endpoints')
 @operational_ns.route('/health')
 class Health(Resource):
     def get(self):
-        """Main health check endpoint"""
-        return {
-            'status': 'healthy',
-            'service': 'inventory-service',
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
-            'version': os.environ.get('API_VERSION', '1.0.0'),
-            'environment': os.environ.get('FLASK_ENV', 'development'),
-        }, 200
+        """Comprehensive health check endpoint with service dependencies"""
+        try:
+            # Get comprehensive health check from service
+            inventory_service = InventoryService()
+            service_health = inventory_service.health_check()
+            
+            # Combine with basic service info
+            health_data = {
+                'status': service_health.get('status', 'healthy'),
+                'service': 'inventory-service',
+                'timestamp': service_health.get('timestamp', datetime.utcnow().isoformat()),
+                'version': os.environ.get('API_VERSION', '1.0.0'),
+                'environment': os.environ.get('FLASK_ENV', 'development'),
+                'database': service_health.get('database', 'unknown'),
+                'redis': service_health.get('redis', 'unknown'),
+            }
+            
+            # Add error if present
+            if 'error' in service_health:
+                health_data['error'] = service_health['error']
+            
+            status_code = 200 if service_health.get('status') == 'healthy' else 503
+            return health_data, status_code
+            
+        except Exception as e:
+            logger.error(f'Health check failed: {e}')
+            return {
+                'status': 'unhealthy',
+                'service': 'inventory-service',
+                'timestamp': datetime.utcnow().isoformat() + 'Z',
+                'version': os.environ.get('API_VERSION', '1.0.0'),
+                'environment': os.environ.get('FLASK_ENV', 'development'),
+                'error': str(e)
+            }, 503
 
 
 @operational_ns.route('/health/ready')

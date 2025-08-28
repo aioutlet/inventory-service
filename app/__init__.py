@@ -71,7 +71,7 @@ def create_app(config_name='default'):
         liveness_resource = Liveness()
         metrics_resource = Metrics()
         
-        # Add direct routes for monitoring/health checks
+        # Add direct routes for monitoring/health checks (for load balancers/monitoring systems)
         app.add_url_rule('/health', 'health', health_resource.get, methods=['GET'])
         app.add_url_rule('/health/ready', 'readiness', readiness_resource.get, methods=['GET'])
         app.add_url_rule('/health/live', 'liveness', liveness_resource.get, methods=['GET'])
