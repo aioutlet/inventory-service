@@ -44,7 +44,7 @@ docker exec -it aioutlet-redis-dev redis-cli -a redis_dev_pass_123 ping
 # =============================================================================
 
 # Pull MySQL image
-docker pull mysql:8.0
+docker pull mysql:latest
 
 # Create MySQL container with proper network and environment
 docker run -d \
@@ -57,7 +57,7 @@ docker run -d \
   -e MYSQL_PASSWORD=apppass123 \
   -v mysql-inventory-data:/var/lib/mysql \
   --network aioutlet-dev-network \
-  mysql:8.0
+  mysql:latest
 
 # Wait for MySQL to start
 echo "Waiting for MySQL to start..."
@@ -180,14 +180,19 @@ print(f'Redis Host: {os.environ.get('REDIS_HOST')}')
 
 # Initialize database schema using Python:
 python -c "
-from app import create_app, db
+from app.database import db
+from app import create_app
+
 app = create_app('development')
+print('Flask app created successfully')
+
 with app.app_context():
     try:
+        print('Creating tables...')
         db.create_all()
         print('✅ Database tables created successfully!')
     except Exception as e:
-        print(f'❌ Error creating database tables: {e}')
+        print(f'❌ Error: {e}')
         raise
 "
 
@@ -202,19 +207,20 @@ SELECT 'Database initialization verified!' AS status;
 "
 
 # =============================================================================
-# STEP 7: Testing Setup
+# STEP 7: Testing Setup (Optional)
 # =============================================================================
 
-# Run tests to verify setup:
-python run_tests.py
+# Run tests to verify setup (optional - can be skipped during initial setup):
+# python -m pytest tests/ -v
 
-# Or with pytest (if preferred):
-# pytest tests/ -v
+# Or run specific test files:
+# python -m pytest tests/test_models.py -v
+# python -m pytest tests/test_services.py -v
 
 # Check code style (optional):
-black app/ tests/ --check
-flake8 app/ tests/
-isort app/ tests/ --check-only
+# black app/ tests/ --check
+# flake8 app/ tests/
+# isort app/ tests/ --check-only
 
 # =============================================================================
 # STEP 8: Start Application

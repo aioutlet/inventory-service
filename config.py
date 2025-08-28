@@ -56,8 +56,8 @@ class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True
     LOG_LEVEL = 'DEBUG'
-    # Use SQLite for development to avoid external database dependency
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///inventory_service_dev.db'
+    # Use MySQL for development (Docker container)
+    # Inherits SQLALCHEMY_DATABASE_URI from base Config class
 
 
 class TestingConfig(Config):

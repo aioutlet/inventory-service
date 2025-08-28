@@ -7,7 +7,7 @@ A Flask-based microservice for managing product inventory.
 import os
 import logging
 from flask import Flask
-from app import create_app, db
+from app import create_app
 
 # Configure logging
 logging.basicConfig(
