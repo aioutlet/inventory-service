@@ -6,7 +6,6 @@ from flask import request
 from flask_restx import Resource, fields
 from marshmallow import ValidationError
 from app.services import InventoryService
-from app.middlewares.auth import require_admin
 from app.utils.validators import (
     InventoryItemRequestSchema, InventoryItemResponseSchema,
     StockAdjustmentRequestSchema, StockMovementResponseSchema,
@@ -59,7 +58,6 @@ def register_inventory_routes(api, namespace):
     class InventoryList(Resource):
         @api.doc('list_inventory')
         @api.marshal_list_with(inventory_item_model)
-        @require_admin
         def get(self):
             """Get all inventory items with optional filtering"""
             try:
@@ -90,7 +88,6 @@ def register_inventory_routes(api, namespace):
 
         @api.doc('create_inventory')
         @api.expect(inventory_item_model)
-        @require_admin
         def post(self):
             """Create new inventory item"""
             try:
@@ -115,7 +112,6 @@ def register_inventory_routes(api, namespace):
     @namespace.route('/<string:product_id>')
     class InventoryItem(Resource):
         @api.doc('get_inventory')
-        @require_admin
         def get(self, product_id):
             """Get inventory item by product ID"""
             try:
@@ -135,7 +131,6 @@ def register_inventory_routes(api, namespace):
         @api.doc('update_inventory')
         @api.expect(inventory_item_model)
         @api.marshal_with(inventory_item_model)
-        @require_admin
         def put(self, product_id):
             """Update inventory item"""
             try:
@@ -160,7 +155,6 @@ def register_inventory_routes(api, namespace):
                 return {'error': 'Internal server error'}, 500
 
         @api.doc('delete_inventory')
-        @require_admin
         def delete(self, product_id):
             """Delete inventory item"""
             try:
@@ -180,7 +174,6 @@ def register_inventory_routes(api, namespace):
     class StockAdjustment(Resource):
         @api.doc('adjust_stock')
         @api.expect(stock_adjustment_model)
-        @require_admin
         def post(self, product_id):
             """Adjust stock for inventory item"""
             try:
@@ -208,7 +201,6 @@ def register_inventory_routes(api, namespace):
     @namespace.route('/bulk')
     class BulkOperations(Resource):
         @api.doc('bulk_operations')
-        @require_admin
         def post(self):
             """Perform bulk inventory operations"""
             try:

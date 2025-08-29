@@ -23,6 +23,7 @@ requests==2.32.4
 psutil==6.0.0
 
 # Utilities
+uuid==1.30
 python-dateutil==2.9.0
 
 # Development dependencies

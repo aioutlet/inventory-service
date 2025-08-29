@@ -133,11 +133,11 @@ class ReservationService:
             logger.error(f"Error cancelling reservation {reservation_id}: {str(e)}")
             raise
     
-    def search_reservations(self, **kwargs) -> List[Dict[str, Any]]:
-        """Search reservations with filters - returns list of reservations for test compatibility"""
+    def search_reservations(self, **kwargs) -> tuple[List[Dict[str, Any]], int]:
+        """Search reservations with filters"""
         try:
             reservations, total = self.reservation_repo.search(**kwargs)
-            return [r.to_dict() for r in reservations]
+            return [r.to_dict() for r in reservations], total
             
         except Exception as e:
             logger.error(f"Error searching reservations: {str(e)}")
@@ -151,28 +151,6 @@ class ReservationService:
                 try:
                     success = self.confirm_reservation(res_id, order_id)
                     results.append({'reservation_id': res_id, 'success': success})
-                except Exception as e:
-                    results.append({'reservation_id': res_id, 'success': False, 'error': str(e)})
-            
-            return results
-            
-        except Exception as e:
-            logger.error(f"Error bulk confirming reservations: {str(e)}")
-            raise
-    
-    def confirm_reservations_bulk(self, reservation_ids: List[str]) -> List[dict]:
-        """Bulk confirm reservations - simplified interface for testing"""
-        try:
-            results = []
-            for res_id in reservation_ids:
-                try:
-                    # Get the reservation to find its order_id
-                    reservation = self.reservation_repo.get_by_id(res_id)
-                    if reservation:
-                        success = self.confirm_reservation(res_id, reservation.order_id)
-                        results.append({'reservation_id': res_id, 'success': success})
-                    else:
-                        results.append({'reservation_id': res_id, 'success': False, 'error': 'Reservation not found'})
                 except Exception as e:
                     results.append({'reservation_id': res_id, 'success': False, 'error': str(e)})
             
@@ -216,10 +194,6 @@ class ReservationService:
         except Exception as e:
             logger.error(f"Error processing expired reservations: {str(e)}")
             raise
-    
-    def expire_reservations(self) -> Dict[str, Any]:
-        """Alias for process_expired_reservations for test compatibility"""
-        return self.process_expired_reservations()
 
     def cleanup_old_reservations(self) -> int:
         """Cleanup old expired reservations (background task)"""

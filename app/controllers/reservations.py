@@ -6,7 +6,6 @@ from flask import request
 from flask_restx import Resource, fields
 from marshmallow import ValidationError
 from app.services import InventoryService
-from app.middlewares.auth import require_admin
 from app.utils.validators import (
     ReservationRequestSchema, ReservationResponseSchema,
     ReservationConfirmRequestSchema
@@ -47,7 +46,6 @@ def register_reservation_routes(api, namespace):
     class ReservationList(Resource):
         @api.doc('list_reservations')
         @api.marshal_list_with(reservation_model)
-        @require_admin
         def get(self):
             """Get all reservations with optional filtering"""
             try:
@@ -86,7 +84,6 @@ def register_reservation_routes(api, namespace):
         @api.doc('create_reservation')
         @api.expect(reservation_model)
         @api.marshal_with(reservation_model)
-        @require_admin
         def post(self):
             """Create new reservation"""
             try:
@@ -114,7 +111,6 @@ def register_reservation_routes(api, namespace):
     class Reservation(Resource):
         @api.doc('get_reservation')
         @api.marshal_with(reservation_model)
-        @require_admin
         def get(self, reservation_id):
             """Get reservation by ID"""
             try:
@@ -132,7 +128,6 @@ def register_reservation_routes(api, namespace):
                 return {'error': 'Internal server error'}, 500
 
         @api.doc('cancel_reservation')
-        @require_admin
         def delete(self, reservation_id):
             """Cancel reservation"""
             try:
@@ -151,7 +146,6 @@ def register_reservation_routes(api, namespace):
     @namespace.route('/confirm')
     class ReservationConfirm(Resource):
         @api.doc('confirm_reservations')
-        @require_admin
         def post(self):
             """Confirm multiple reservations"""
             try:

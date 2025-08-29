@@ -8,15 +8,6 @@ class Config:
     # Flask
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
     
-    # JWT Authentication
-    JWT_SECRET = os.environ.get('JWT_SECRET') or 'dev-jwt-secret-change-in-production'
-    JWT_ALGORITHM = os.environ.get('JWT_ALGORITHM', 'HS256')
-    JWT_ACCESS_TOKEN_EXPIRES = int(os.environ.get('JWT_ACCESS_TOKEN_EXPIRES', 3600))  # 1 hour
-    
-    # External Services
-    USER_SERVICE_URL = os.environ.get('USER_SERVICE_URL', 'http://localhost:3000')
-    USER_SERVICE_TIMEOUT = int(os.environ.get('USER_SERVICE_TIMEOUT', 5))
-    
     # Database
     DATABASE_HOST = os.environ.get('DATABASE_HOST', 'localhost')
     DATABASE_PORT = int(os.environ.get('DATABASE_PORT', 3306))
@@ -65,8 +56,8 @@ class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True
     LOG_LEVEL = 'DEBUG'
-    # Use MySQL for development (Docker container)
-    # Inherits SQLALCHEMY_DATABASE_URI from base Config class
+    # Use SQLite for development to avoid external database dependency
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///inventory_service_dev.db'
 
 
 class TestingConfig(Config):
@@ -77,20 +68,12 @@ class TestingConfig(Config):
     # Use different Redis DB for testing
     REDIS_DB = 1
     WTF_CSRF_ENABLED = False
-    # Test JWT secret - hardcoded for consistent testing
-    JWT_SECRET = 'test-jwt-secret-for-testing-only'
-    USER_SERVICE_TIMEOUT = 1  # Faster timeout for tests
 
 
 class ProductionConfig(Config):
     """Production configuration"""
     DEBUG = False
     # Override with production values if needed
-    # Ensure JWT_SECRET is set in production
-    def __init__(self):
-        super().__init__()
-        if not os.environ.get('JWT_SECRET'):
-            raise ValueError("JWT_SECRET environment variable must be set in production")
 
 
 config = {

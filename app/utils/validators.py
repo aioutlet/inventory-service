@@ -146,7 +146,7 @@ class ReservationConfirmRequestSchema(Schema):
 class HealthCheckResponseSchema(Schema):
     """Schema for health check responses"""
     status = fields.Str()
-    timestamp = fields.Str()
-    database = fields.Str()
-    redis = fields.Str()
-    error = fields.Str()
+    timestamp = fields.DateTime()
+    database = fields.Dict()
+    redis = fields.Dict()
+    external_services = fields.Dict()

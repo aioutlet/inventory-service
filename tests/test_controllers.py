@@ -57,7 +57,7 @@ class TestHealthCheck:
     
     def test_health_check_basic(self, client, db_session):
         """Test basic health check."""
-        response = client.get('/api/v1/operational/health')
+        response = client.get('/api/v1/health/')
         
         # Should return some response (may be 200 or 503 depending on services)
         assert response.status_code in [200, 503]

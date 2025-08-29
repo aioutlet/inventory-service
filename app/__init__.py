@@ -1,7 +1,9 @@
 from flask import Flask
 from flask_cors import CORS
+from flask_restx import Api
 import redis
 import logging
+from datetime import datetime
 
 # Initialize Redis client
 redis_client = None
@@ -69,7 +71,7 @@ def create_app(config_name='default'):
         liveness_resource = Liveness()
         metrics_resource = Metrics()
         
-        # Add direct routes for monitoring/health checks (for load balancers/monitoring systems)
+        # Add direct routes for monitoring/health checks
         app.add_url_rule('/health', 'health', health_resource.get, methods=['GET'])
         app.add_url_rule('/health/ready', 'readiness', readiness_resource.get, methods=['GET'])
         app.add_url_rule('/health/live', 'liveness', liveness_resource.get, methods=['GET'])

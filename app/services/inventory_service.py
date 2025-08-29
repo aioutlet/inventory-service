@@ -153,10 +153,6 @@ class InventoryService:
             logger.error(f"Error getting inventory for product ID {product_id}: {str(e)}")
             raise
     
-    def get_inventory_with_product_details(self, product_id: str) -> Optional[Dict[str, Any]]:
-        """Get inventory item enriched with product details from product service - alias for compatibility"""
-        return self.get_inventory_by_product_id(product_id)
-    
     def create_inventory_item(self, **kwargs) -> Dict[str, Any]:
         """Create a new inventory item"""
         try:
@@ -282,16 +278,6 @@ class InventoryService:
             
         except Exception as e:
             logger.error(f"Error searching inventory: {str(e)}")
-            raise
-    
-    def search_inventory_advanced(self, **kwargs) -> tuple[List[Dict[str, Any]], int]:
-        """Advanced inventory search with additional filtering options"""
-        try:
-            items, total = self.inventory_repo.search(**kwargs)
-            return [item.to_dict() for item in items], total
-            
-        except Exception as e:
-            logger.error(f"Error in advanced inventory search: {str(e)}")
             raise
 
     def check_availability(self, sku: str, quantity: int) -> Dict[str, Any]:
