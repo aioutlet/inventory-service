@@ -17,7 +17,7 @@ python-dotenv==1.0.1
 marshmallow==3.22.0
 
 # HTTP Client for service communication
-requests==2.32.4
+requests==2.32.5
 
 # System monitoring
 psutil==6.0.0
