@@ -21,6 +21,11 @@ def create_app(config_name='default'):
     from dotenv import load_dotenv
     load_dotenv()
     
+    # Initialize correlation ID middleware
+    from app.middleware.correlation_id import CorrelationIdMiddleware, init_correlation_id_logging
+    correlation_middleware = CorrelationIdMiddleware(app)
+    init_correlation_id_logging(app)
+    
     # Initialize database
     from app.database import init_db
     db = init_db(app)
