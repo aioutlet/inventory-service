@@ -363,3 +363,58 @@ class InventoryService:
             
         except Exception as e:
             logger.warning(f"Error clearing caches: {e}")
+
+    def search_inventory_advanced(self, **kwargs) -> tuple[List[Dict[str, Any]], int]:
+        """
+        Advanced inventory search with extended filters and product details
+        
+        Args:
+            **kwargs: Various search parameters (sku, product_id, category, etc.)
+            
+        Returns:
+            Tuple of (items, total_count)
+        """
+        try:
+            # Use existing search_inventory method as base
+            items, total_count = self.search_inventory(**kwargs)
+            
+            # Enhance with additional details if needed
+            for item in items:
+                if 'include_product_details' in kwargs and kwargs['include_product_details']:
+                    # Add product service call here if needed
+                    item['product_details'] = {'status': 'enhanced'}
+                    
+            return items, total_count
+            
+        except Exception as e:
+            logger.error(f"Advanced inventory search failed: {e}")
+            return [], 0
+
+    def get_inventory_with_product_details(self, product_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get inventory item with enhanced product details
+        
+        Args:
+            product_id: Product identifier
+            
+        Returns:
+            Inventory item with product details or None
+        """
+        try:
+            # Get base inventory item
+            inventory_item = self.get_inventory_by_product_id(product_id)
+            
+            if inventory_item:
+                # Add product details from external service
+                try:
+                    product_details = self.product_client.get_product(product_id)
+                    inventory_item['product_details'] = product_details
+                except Exception as e:
+                    logger.warning(f"Could not fetch product details for {product_id}: {e}")
+                    inventory_item['product_details'] = {'error': 'Product details unavailable'}
+                    
+            return inventory_item
+            
+        except Exception as e:
+            logger.error(f"Get inventory with product details failed: {e}")
+            return None

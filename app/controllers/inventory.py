@@ -217,3 +217,22 @@ def register_inventory_routes(api, namespace):
             except Exception as e:
                 logger.error(f"Error performing bulk operations: {e}")
                 return {'error': 'Internal server error'}, 500
+
+    @namespace.route('/health')
+    class InventoryHealth(Resource):
+        @api.doc('inventory_health')
+        def get(self):
+            """Basic health check for inventory service"""
+            try:
+                inventory_service = InventoryService()
+                health_status = inventory_service.health_check()
+                
+                return health_status, 200
+                
+            except Exception as e:
+                logger.error(f"Health check failed: {e}")
+                return {
+                    'status': 'unhealthy',
+                    'service': 'inventory-service',
+                    'error': str(e)
+                }, 503

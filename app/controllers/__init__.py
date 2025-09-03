@@ -8,7 +8,6 @@ from app.utils.error_handlers import register_error_handlers
 from app.controllers.operational import operational_ns
 from app.controllers.inventory import register_inventory_routes
 from app.controllers.reservations import register_reservation_routes
-from app.controllers.health import register_health_routes
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,7 +21,6 @@ api = Api(inventory_bp, version='1.0', title='Inventory Service API',
 # Define namespaces
 inventory_ns = api.namespace('inventory', description='Inventory operations')
 reservations_ns = api.namespace('reservations', description='Reservation operations')
-health_ns = api.namespace('health', description='Health check operations')
 
 # Add operational namespace (for monitoring endpoints)
 api.add_namespace(operational_ns)
@@ -30,7 +28,6 @@ api.add_namespace(operational_ns)
 # Register routes for each namespace
 register_inventory_routes(api, inventory_ns)
 register_reservation_routes(api, reservations_ns)
-register_health_routes(api, health_ns)
 
 
 def register_routes(app):

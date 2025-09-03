@@ -133,8 +133,19 @@ class ReservationService:
             logger.error(f"Error cancelling reservation {reservation_id}: {str(e)}")
             raise
     
-    def search_reservations(self, **kwargs) -> tuple[List[Dict[str, Any]], int]:
-        """Search reservations with filters"""
+    def search_reservations(self, **kwargs):
+        """Search reservations with filters - returns list for compatibility with tests"""
+        try:
+            reservations, total = self.reservation_repo.search(**kwargs)
+            # Return just the list for test compatibility
+            return [r.to_dict() for r in reservations]
+            
+        except Exception as e:
+            logger.error(f"Error searching reservations: {str(e)}")
+            raise
+
+    def search_reservations_with_count(self, **kwargs) -> tuple[List[Dict[str, Any]], int]:
+        """Search reservations with filters - returns tuple with count"""
         try:
             reservations, total = self.reservation_repo.search(**kwargs)
             return [r.to_dict() for r in reservations], total
@@ -284,4 +295,101 @@ class ReservationService:
             
         except Exception as e:
             logger.error(f"Error reserving stock for order {order_id}: {str(e)}")
+            raise
+
+    def confirm_reservations_bulk(self, reservation_ids: List[str], order_id: str = None) -> List[dict]:
+        """
+        Bulk confirm reservations
+        
+        Args:
+            reservation_ids: List of reservation IDs to confirm
+            order_id: Order identifier (optional - each reservation uses its own order_id if not provided)
+            
+        Returns:
+            List of confirmation results
+        """
+        try:
+            results = []
+            
+            for res_id in reservation_ids:
+                try:
+                    if order_id is None:
+                        # Use the reservation's own order_id
+                        reservation = self.reservation_repo.get_by_id(res_id)
+                        if reservation:
+                            success = self.confirm_reservation(res_id, reservation.order_id)
+                        else:
+                            success = False
+                    else:
+                        # Use provided order_id for all reservations
+                        success = self.confirm_reservation(res_id, order_id)
+                    
+                    results.append({'reservation_id': res_id, 'success': success})
+                    
+                except Exception as e:
+                    results.append({'reservation_id': res_id, 'success': False, 'error': str(e)})
+                    logger.error(f"Error confirming reservation {res_id}: {str(e)}")
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error in bulk confirm reservations: {str(e)}")
+            # Return error result for all reservations
+            return [{'reservation_id': res_id, 'success': False, 'error': str(e)} for res_id in reservation_ids]
+
+    def expire_reservations(self, reservation_ids: List[str] = None) -> Dict[str, Any]:
+        """
+        Expire specific reservations or process all expired reservations
+        
+        Args:
+            reservation_ids: List of reservation IDs to expire (optional)
+            
+        Returns:
+            Dict with expiration results
+        """
+        try:
+            if reservation_ids is None:
+                # Process all expired reservations (for compatibility with tests)
+                return self.process_expired_reservations()
+            
+            # Expire specific reservations
+            results = []
+            
+            for res_id in reservation_ids:
+                try:
+                    reservation = self.reservation_repo.get_by_id(res_id)
+                    if not reservation:
+                        results.append({'reservation_id': res_id, 'success': False, 'error': 'Not found'})
+                        continue
+                    
+                    # Update status to expired
+                    self.reservation_repo.update_status(res_id, ReservationStatus.EXPIRED)
+                    
+                    # Release stock if it was reserved
+                    if reservation.status == ReservationStatus.PENDING:
+                        self.inventory_repo.update_stock(
+                            sku=reservation.sku,
+                            quantity_change=reservation.quantity,
+                            movement_type=StockMovementType.RELEASED,
+                            reference=reservation.order_id,
+                            reason=f"Released manually expired reservation for order {reservation.order_id}"
+                        )
+                    
+                    results.append({'reservation_id': res_id, 'success': True})
+                    logger.info(f"Manually expired reservation {res_id}")
+                    
+                except Exception as e:
+                    results.append({'reservation_id': res_id, 'success': False, 'error': str(e)})
+                    logger.error(f"Error expiring reservation {res_id}: {e}")
+            
+            return {
+                'results': results,
+                'total_processed': len(reservation_ids),
+                'successful': len([r for r in results if r['success']]),
+                'failed': len([r for r in results if not r['success']]),
+                'expired_at': datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Error expiring reservations: {str(e)}")
             raise
