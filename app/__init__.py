@@ -51,6 +51,14 @@ def create_app(config_name='default'):
         app.logger.warning(f"Redis connection failed: {e}. Caching will be disabled.")
         redis_client = None
     
+    # Initialize rate limiting
+    try:
+        from app.middlewares.rate_limit import init_rate_limiter
+        limiter = init_rate_limiter(app)
+        app.logger.info("Rate limiting initialized successfully")
+    except Exception as e:
+        app.logger.warning(f"Rate limiting initialization failed: {e}. Running without rate limiting.")
+    
     # Configure logging
     if not app.testing:
         logging.basicConfig(
