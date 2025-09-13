@@ -2,8 +2,13 @@ from flask import jsonify
 from werkzeug.exceptions import HTTPException
 from marshmallow import ValidationError
 import logging
+import os
 
 logger = logging.getLogger(__name__)
+
+# Environment detection
+IS_DEVELOPMENT = os.getenv('ENVIRONMENT', 'development') == 'development'
+IS_PRODUCTION = os.getenv('ENVIRONMENT', 'development') == 'production'
 
 
 def register_error_handlers(app):
@@ -43,7 +48,12 @@ def register_error_handlers(app):
     
     @app.errorhandler(500)
     def internal_error(error):
-        logger.error(f"Internal server error: {error}")
+        # Log with environment-specific stack trace handling
+        if IS_DEVELOPMENT:
+            logger.error(f"Internal server error: {error}", exc_info=True)
+        else:
+            logger.error(f"Internal server error: {error}")
+            
         return jsonify({
             'error': 'Internal Server Error',
             'message': 'An unexpected error occurred',
@@ -52,6 +62,7 @@ def register_error_handlers(app):
     
     @app.errorhandler(ValidationError)
     def validation_error(error):
+        logger.warning(f"Validation error: {error.messages}")
         return jsonify({
             'error': 'Validation Error',
             'message': 'Request data validation failed',
@@ -61,6 +72,7 @@ def register_error_handlers(app):
     
     @app.errorhandler(ValueError)
     def value_error(error):
+        logger.warning(f"Value error: {str(error)}")
         return jsonify({
             'error': 'Invalid Value',
             'message': str(error),
@@ -69,6 +81,15 @@ def register_error_handlers(app):
     
     @app.errorhandler(HTTPException)
     def http_exception(error):
+        # Log with appropriate level based on status code
+        if error.code >= 500:
+            if IS_DEVELOPMENT:
+                logger.error(f"HTTP {error.code}: {error.description}", exc_info=True)
+            else:
+                logger.error(f"HTTP {error.code}: {error.description}")
+        else:
+            logger.warning(f"HTTP {error.code}: {error.description}")
+            
         return jsonify({
             'error': error.name,
             'message': error.description,
