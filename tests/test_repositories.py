@@ -3,8 +3,8 @@ from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
 from sqlalchemy.exc import IntegrityError
 
-from app.repositories import InventoryRepository, ReservationRepository
-from app.models import InventoryItem, Reservation, StockMovement, StockMovementType, ReservationStatus
+from src.shared.repositories import InventoryRepository, ReservationRepository
+from src.shared.models import InventoryItem, Reservation, StockMovement, StockMovementType, ReservationStatus
 from tests.conftest import create_test_inventory_item, create_test_reservation, create_test_stock_movement
 
 

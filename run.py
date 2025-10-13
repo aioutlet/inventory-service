@@ -7,7 +7,7 @@ A Flask-based microservice for managing product inventory.
 import os
 import logging
 from flask import Flask
-from app import create_app, db
+from src import create_app, db
 
 # Configure logging
 logging.basicConfig(
@@ -27,7 +27,7 @@ def main():
     app = create_app(env)
     
     # Initialize database (this is now separate from app creation)
-    from app import init_database
+    from src import init_database
     try:
         init_database(app)
     except Exception as e:

@@ -2,8 +2,8 @@ import pytest
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
 
-from app.services import InventoryService, ReservationService
-from app.models import InventoryItem, Reservation, StockMovementType, ReservationStatus
+from src.shared.services import InventoryService, ReservationService
+from src.shared.models import InventoryItem, Reservation, StockMovementType, ReservationStatus
 from tests.conftest import create_test_inventory_item, create_test_reservation
 
 

@@ -19,6 +19,11 @@ marshmallow==3.22.0
 
 # HTTP Client for service communication
 requests==2.32.4
+httpx==0.28.1
+
+# Message Broker
+aio-pika==9.5.7
+aiokafka==0.12.0
 
 # System monitoring
 psutil==6.0.0

@@ -10,8 +10,8 @@ os.environ['FLASK_ENV'] = 'testing'
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['REDIS_URL'] = 'redis://localhost:6379/1'
 
-from app import create_app
-from app.models import db, InventoryItem, Reservation, StockMovement, StockMovementType, ReservationStatus
+from src.api.main import create_app
+from src.shared.models import db, InventoryItem, Reservation, StockMovement, StockMovementType, ReservationStatus
 
 
 @pytest.fixture(scope='session')
@@ -104,7 +104,7 @@ def sample_stock_movement(db_session, sample_inventory_item):
 @pytest.fixture
 def mock_redis():
     """Mock Redis client for testing."""
-    with patch('app.get_redis') as mock_get_redis:
+    with patch('src.api.main.get_redis') as mock_get_redis:
         mock_redis = MagicMock()
         mock_redis.get.return_value = None
         mock_redis.set.return_value = True
@@ -117,7 +117,7 @@ def mock_redis():
 @pytest.fixture
 def mock_product_service():
     """Mock Product Service client for testing."""
-    with patch('app.utils.external_service_client.ProductServiceClient') as mock_client:
+    with patch('src.shared.utils.external_service_client.ProductServiceClient') as mock_client:
         mock_instance = MagicMock()
         mock_instance.get_product.return_value = {
             'id': 'TEST001',
