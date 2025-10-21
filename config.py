@@ -10,13 +10,13 @@ class Config:
     
     # Database
     DATABASE_HOST = os.environ.get('DATABASE_HOST', 'localhost')
-    DATABASE_PORT = int(os.environ.get('DATABASE_PORT', 3306))
-    DATABASE_USER = os.environ.get('DATABASE_USER', 'appuser')
-    DATABASE_PASSWORD = os.environ.get('DATABASE_PASSWORD', 'apppass123')
+    DATABASE_PORT = int(os.environ.get('DATABASE_PORT', 5432))
+    DATABASE_USER = os.environ.get('DATABASE_USER', 'inventoryuser')
+    DATABASE_PASSWORD = os.environ.get('DATABASE_PASSWORD', 'inventorypass123')
     DATABASE_NAME = os.environ.get('DATABASE_NAME', 'inventory_service_db')
     
     SQLALCHEMY_DATABASE_URI = (
-        f"mysql+pymysql://{DATABASE_USER}:{DATABASE_PASSWORD}@"
+        f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@"
         f"{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -56,8 +56,7 @@ class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True
     LOG_LEVEL = 'DEBUG'
-    # Use SQLite for development to avoid external database dependency
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///inventory_service_dev.db'
+    # PostgreSQL is the primary database for all environments
 
 
 class TestingConfig(Config):

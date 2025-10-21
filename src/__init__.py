@@ -22,7 +22,7 @@ def create_app(config_name='default'):
     load_dotenv()
     
     # Initialize correlation ID middleware
-    from src.middleware.correlation_id import CorrelationIdMiddleware, init_correlation_id_logging
+    from src.api.middlewares.correlation_id import CorrelationIdMiddleware, init_correlation_id_logging
     correlation_middleware = CorrelationIdMiddleware(app)
     init_correlation_id_logging(app)
     
@@ -53,7 +53,7 @@ def create_app(config_name='default'):
     
     # Initialize rate limiting
     try:
-        from src.middlewares.rate_limit import init_rate_limiter
+        from src.api.middlewares.rate_limit import init_rate_limiter
         limiter = init_rate_limiter(app)
         app.logger.info("Rate limiting initialized successfully")
     except Exception as e:
@@ -68,7 +68,7 @@ def create_app(config_name='default'):
     
     # Register blueprints/namespaces (commented out for initial testing)
     try:
-        from src.controllers import inventory_bp
+        from src.api.controllers import inventory_bp
         app.register_blueprint(inventory_bp, url_prefix='/api/v1')
         app.logger.info("Controllers registered successfully")
     except Exception as e:
@@ -76,7 +76,7 @@ def create_app(config_name='default'):
     
     # Register direct operational endpoints (not under /api/v1)
     try:
-        from src.controllers.operational import Health, Readiness, Liveness, Metrics
+        from src.api.controllers.operational import Health, Readiness, Liveness, Metrics
         
         # Create Flask-RESTX resources for direct access
         health_resource = Health()
