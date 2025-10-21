@@ -35,7 +35,7 @@ def create_app(config_name='default'):
     load_dotenv()
     
     # Initialize correlation ID middleware
-    from src.api.middlewares.middleware.correlation_id import CorrelationIdMiddleware, init_correlation_id_logging
+    from src.api.middlewares.correlation_id import CorrelationIdMiddleware, init_correlation_id_logging
     correlation_middleware = CorrelationIdMiddleware(app)
     init_correlation_id_logging(app)
     
