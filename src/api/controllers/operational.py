@@ -27,9 +27,9 @@ class Health(Resource):
         """Main health check endpoint"""
         return {
             'status': 'healthy',
-            'service': 'inventory-service',
+            'service': os.environ.get('SERVICE_NAME', 'inventory-service'),
             'timestamp': datetime.utcnow().isoformat() + 'Z',
-            'version': os.environ.get('API_VERSION', '1.0.0'),
+            'version': os.environ.get('SERVICE_VERSION', '1.0.0'),
             'environment': os.environ.get('FLASK_ENV', 'development'),
         }, 200
 
