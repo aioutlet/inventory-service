@@ -1,12 +1,9 @@
+import os
+import sys
+import logging
 from flask import Flask
 from flask_cors import CORS
-from flask_restx import Api
-import redis
-import logging
-from datetime import datetime
-
-# Initialize Redis client
-redis_client = None
+from src.shared.models import db
 
 
 def create_app(config_name='default'):
@@ -32,32 +29,6 @@ def create_app(config_name='default'):
     
     # CORS setup
     CORS(app, origins=app.config.get('CORS_ORIGINS', ['*']))
-    
-    # Initialize Redis
-    global redis_client
-    try:
-        redis_client = redis.Redis(
-            host=app.config['REDIS_HOST'],
-            port=app.config['REDIS_PORT'],
-            db=app.config['REDIS_DB'],
-            password=app.config['REDIS_PASSWORD'],
-            decode_responses=True,
-            socket_connect_timeout=5,  # 5 second timeout
-            socket_timeout=5
-        )
-        redis_client.ping()  # Test connection
-        app.logger.info("Redis connection established")
-    except Exception as e:
-        app.logger.warning(f"Redis connection failed: {e}. Caching will be disabled.")
-        redis_client = None
-    
-    # Initialize rate limiting
-    try:
-        from src.api.middlewares.rate_limit import init_rate_limiter
-        limiter = init_rate_limiter(app)
-        app.logger.info("Rate limiting initialized successfully")
-    except Exception as e:
-        app.logger.warning(f"Rate limiting initialization failed: {e}. Running without rate limiting.")
     
     # Configure logging
     if not app.testing:
@@ -101,12 +72,7 @@ def create_app(config_name='default'):
     return app
 
 
-def get_redis():
-    """Get Redis client instance"""
-    return redis_client
-
-
-def init_database(app):
+def init_db(app):
     """Initialize database tables - call this explicitly when ready"""
     from src.shared.database import db
     with app.app_context():

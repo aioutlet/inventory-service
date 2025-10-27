@@ -1,6 +1,6 @@
 """
 Health Check Utilities for inventory service
-Provides standardized health checks for database, Redis, and external services
+Provides standardized health checks for database and external services
 """
 
 import time
@@ -10,7 +10,6 @@ import requests
 from datetime import datetime
 from sqlalchemy import text
 from src.shared.database import db
-from src.api.main import get_redis
 import logging
 
 logger = logging.getLogger(__name__)
@@ -54,58 +53,13 @@ def check_database_health():
         }
 
 
-def check_redis_health():
-    """Check Redis cache connectivity"""
-    try:
-        redis_client = get_redis()
-        
-        if not redis_client:
-            return {
-                'status': 'skipped',
-                'message': 'Redis client not configured',
-                'response_time': 0,
-            }
-        
-        start_time = time.time()
-        
-        # Test Redis with ping and a simple operation
-        redis_client.ping()
-        redis_client.set('health_check', 'test', ex=10)  # 10 second expiry
-        test_value = redis_client.get('health_check')
-        redis_client.delete('health_check')
-        
-        response_time = (time.time() - start_time) * 1000
-        
-        if test_value != 'test':
-            raise Exception("Redis read/write test failed")
-        
-        # Get Redis info
-        info = redis_client.info()
-        
+    def check_redis_health():
+        """Redis disabled - returning unavailable status"""
         return {
-            'status': 'healthy',
-            'message': 'Redis cache connection is healthy',
-            'response_time': round(response_time, 2),
-            'details': {
-                'version': info.get('redis_version'),
-                'uptime': info.get('uptime_in_seconds'),
-                'connected_clients': info.get('connected_clients'),
-                'used_memory': info.get('used_memory_human'),
-                'hits': info.get('keyspace_hits', 0),
-                'misses': info.get('keyspace_misses', 0),
-            },
+            'status': 'unavailable',
+            'message': 'Redis disabled',
+            'latency_ms': None
         }
-    except Exception as e:
-        return {
-            'status': 'unhealthy',
-            'message': f'Redis health check failed: {str(e)}',
-            'response_time': 0,
-            'details': {
-                'error': str(e),
-            },
-        }
-
-
 def check_external_service_health(service_name, service_url, timeout=5):
     """Check external service connectivity"""
     start_time = time.time()
@@ -187,11 +141,13 @@ def perform_readiness_check():
         if checks['database']['status'] != 'healthy':
             overall_healthy = False
         
-        # Check Redis cache
-        logger.debug('Performing Redis health check')
-        checks['redis'] = check_redis_health()
-        if checks['redis']['status'] not in ['healthy', 'skipped']:
-            overall_healthy = False
+        # Redis disabled
+        logger.debug('Redis health check skipped (disabled)')
+        checks['redis'] = {
+            'status': 'unavailable',
+            'message': 'Redis disabled',
+            'latency_ms': None
+        }
         
         # Check external services
         external_services = [

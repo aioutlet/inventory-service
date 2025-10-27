@@ -11,9 +11,9 @@ class Config:
     # Database
     DATABASE_HOST = os.environ.get('DATABASE_HOST', 'localhost')
     DATABASE_PORT = int(os.environ.get('DATABASE_PORT', 3306))
-    DATABASE_USER = os.environ.get('DATABASE_USER', 'inventoryuser')
-    DATABASE_PASSWORD = os.environ.get('DATABASE_PASSWORD', 'inventory_dev_pass_123')
-    DATABASE_NAME = os.environ.get('DATABASE_NAME', 'inventory_service_db')
+    DATABASE_USER = os.environ.get('MYSQL_USER', 'admin')
+    DATABASE_PASSWORD = os.environ.get('MYSQL_PASSWORD', 'admin123')
+    DATABASE_NAME = os.environ.get('MYSQL_DATABASE', 'inventory_service_db')
     
     SQLALCHEMY_DATABASE_URI = (
         f"mysql+pymysql://{DATABASE_USER}:{DATABASE_PASSWORD}@"
@@ -25,15 +25,7 @@ class Config:
         'pool_recycle': 300,
     }
     
-    # Redis Cache
-    REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
-    REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
-    REDIS_DB = int(os.environ.get('REDIS_DB', 0))
-    REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', None)
-    
-    # Cache TTL (in seconds)
-    CACHE_TTL_STOCK_CHECK = int(os.environ.get('CACHE_TTL_STOCK_CHECK', 300))  # 5 minutes
-    CACHE_TTL_INVENTORY = int(os.environ.get('CACHE_TTL_INVENTORY', 600))  # 10 minutes
+    # Cache disabled - Redis removed
     
     # Reservation settings
     RESERVATION_TTL_MINUTES = int(os.environ.get('RESERVATION_TTL_MINUTES', 30))

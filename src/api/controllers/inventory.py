@@ -198,6 +198,34 @@ def register_inventory_routes(api, namespace):
                 logger.error(f"Error adjusting stock for product {product_id}: {e}")
                 return {'error': 'Internal server error'}, 500
 
+    @namespace.route('/check-availability')
+    class CheckAvailability(Resource):
+        @api.doc('check_stock_availability')
+        def post(self):
+            """Check stock availability for multiple items"""
+            try:
+                if not request.json or 'items' not in request.json:
+                    return {'error': 'Missing items in request body'}, 400
+                
+                items = request.json['items']
+                
+                # Validate items format
+                if not isinstance(items, list) or not items:
+                    return {'error': 'Items must be a non-empty array'}, 400
+                
+                for item in items:
+                    if not isinstance(item, dict) or 'sku' not in item or 'quantity' not in item:
+                        return {'error': 'Each item must have sku and quantity'}, 400
+                
+                inventory_service = InventoryService()
+                result = inventory_service.check_stock_availability(items)
+                
+                return result, 200
+                
+            except Exception as e:
+                logger.error(f"Error checking stock availability: {e}")
+                return {'error': 'Internal server error', 'details': str(e)}, 500
+
     @namespace.route('/bulk')
     class BulkOperations(Resource):
         @api.doc('bulk_operations')

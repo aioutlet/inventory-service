@@ -5,14 +5,17 @@ Implements request rate limiting using Flask-Limiter
 
 import os
 import logging
+import warnings
 from datetime import datetime
 from functools import wraps
 from flask import request, jsonify, g
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from src.api.main import get_redis
 
 logger = logging.getLogger(__name__)
+
+# Suppress Flask-Limiter in-memory storage warning (intentional for now)
+warnings.filterwarnings('ignore', message='.*in-memory storage.*', module='flask_limiter')
 
 # Rate limiting configuration based on environment
 def get_rate_limit_config():
@@ -49,39 +52,17 @@ def get_rate_limit_config():
 
 # Initialize rate limiter
 def init_rate_limiter(app):
-    """Initialize rate limiter with Redis storage if available"""
-    redis_client = get_redis()
-    
-    # Use Redis if available, otherwise in-memory storage
-    storage_uri = None
-    if redis_client:
-        try:
-            redis_client.ping()
-            # Construct Redis URI for flask-limiter
-            redis_host = app.config.get('REDIS_HOST', 'localhost')
-            redis_port = app.config.get('REDIS_PORT', 6379)
-            redis_db = app.config.get('REDIS_DB', 0)
-            redis_password = app.config.get('REDIS_PASSWORD')
-            
-            if redis_password:
-                storage_uri = f"redis://:{redis_password}@{redis_host}:{redis_port}/{redis_db}"
-            else:
-                storage_uri = f"redis://{redis_host}:{redis_port}/{redis_db}"
-                
-            logger.info("Rate limiter using Redis storage")
-        except Exception as e:
-            logger.warning(f"Redis not available for rate limiting: {e}. Using in-memory storage.")
-            storage_uri = None
+    """Initialize rate limiter with in-memory storage (Redis removed, will implement caching later)"""
+    logger.info("Rate limiter using in-memory storage (caching disabled)")
     
     # Get rate limit configuration
     rate_config = get_rate_limit_config()
     
-    # Initialize limiter
+    # Initialize limiter with in-memory storage
     limiter = Limiter(
         app=app,
         key_func=get_rate_limit_key,
         default_limits=[rate_config['default']],
-        storage_uri=storage_uri,
         headers_enabled=True,
         strategy="fixed-window",
         on_breach=rate_limit_breach_handler

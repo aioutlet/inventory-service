@@ -9,7 +9,7 @@ from src.shared.database import db
 from src.shared.models.inventory_item import InventoryItem
 from src.shared.models.reservation import Reservation
 from src.shared.models.enums import MovementType
-from src.shared.services.message_broker_publisher import get_publisher
+from src.shared.services.message_broker_service import get_publisher
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)

@@ -102,16 +102,10 @@ def sample_stock_movement(db_session, sample_inventory_item):
 
 
 @pytest.fixture
-def mock_redis():
-    """Mock Redis client for testing."""
-    with patch('src.api.main.get_redis') as mock_get_redis:
-        mock_redis = MagicMock()
-        mock_redis.get.return_value = None
-        mock_redis.set.return_value = True
-        mock_redis.delete.return_value = True
-        mock_redis.ping.return_value = True
-        mock_get_redis.return_value = mock_redis
-        yield mock_redis
+def mock_dependencies(monkeypatch):
+    """Mock external dependencies"""
+    # Mock product service client
+    mock_product_client = MagicMock()
 
 
 @pytest.fixture

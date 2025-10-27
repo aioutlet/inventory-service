@@ -1,37 +1,57 @@
 """
 Message Broker Publisher Service
-Publishes events to message broker service via HTTP
+Publishes events to message broker service via HTTP using AWS EventBridge pattern
 """
 import os
 import httpx
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+from datetime import datetime
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
 
 
 class MessageBrokerPublisher:
-    """Publisher for sending events to message broker service"""
+    """
+    Publisher for sending events to message broker service
+    Follows AWS EventBridge pattern with source, eventType, and structured data
+    """
     
     def __init__(self):
         self.broker_url = os.getenv('MESSAGE_BROKER_SERVICE_URL', 'http://localhost:4000')
         self.api_key = os.getenv('MESSAGE_BROKER_API_KEY', '')
         self.service_name = os.getenv('SERVICE_NAME', 'inventory-service')
+        self.event_version = os.getenv('EVENT_VERSION', '1.0')
         
-    async def publish(self, event_type: str, data: Dict[str, Any], correlation_id: str = None):
+    async def publish(
+        self, 
+        event_type: str, 
+        data: Dict[str, Any], 
+        correlation_id: Optional[str] = None,
+        event_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ):
         """
-        Publish an event to the message broker service
+        Publish an event to the message broker service using EventBridge pattern
         
         Args:
             event_type: The type of event (e.g., 'inventory.reserved')
             data: The event payload
             correlation_id: Optional correlation ID for tracing
+            event_id: Optional event-specific unique identifier
+            metadata: Optional additional context
         """
         try:
+            # Build EventBridge-compliant message
             payload = {
-                'eventType': event_type,
                 'source': self.service_name,
+                'eventType': event_type,
+                'eventVersion': self.event_version,
+                'eventId': event_id or str(uuid.uuid4()),
+                'timestamp': datetime.utcnow().isoformat() + 'Z',
                 'data': data,
+                'metadata': metadata or {},
                 'correlationId': correlation_id
             }
             
@@ -45,7 +65,7 @@ class MessageBrokerPublisher:
             
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{self.broker_url}/api/publish",
+                    f"{self.broker_url}/api/v1/publish",
                     json=payload,
                     headers=headers,
                     timeout=5.0

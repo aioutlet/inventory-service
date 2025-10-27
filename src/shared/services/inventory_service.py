@@ -6,10 +6,8 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import logging
 
-from src.api.main import get_redis
 from src.shared.models import InventoryItem, StockMovementType
 from src.shared.repositories import InventoryRepository
-from src.shared.utils.cache_utils import cache_key_generator, get_from_cache, set_cache
 from src.shared.utils.external_service_client import ProductServiceClient
 
 logger = logging.getLogger(__name__)
@@ -21,7 +19,6 @@ class InventoryService:
     def __init__(self):
         self.inventory_repo = InventoryRepository()
         self.product_client = ProductServiceClient()
-        self.redis = get_redis()
     
     def check_stock_availability(self, stock_items: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -36,13 +33,6 @@ class InventoryService:
         try:
             # Extract SKUs for batch query
             skus = [item['sku'] for item in stock_items]
-            
-            # Try cache first
-            cache_key = cache_key_generator('stock_check', skus)
-            cached_result = get_from_cache(cache_key, self.redis)
-            if cached_result:
-                logger.debug("Stock check served from cache")
-                return cached_result
             
             # Get inventory items from database
             inventory_items = self.inventory_repo.get_multiple_by_skus(skus)
@@ -80,9 +70,6 @@ class InventoryService:
                 'checked_at': datetime.utcnow().isoformat()
             }
             
-            # Cache the result
-            set_cache(cache_key, response, 300, self.redis)  # 5 minutes TTL
-            
             return response
             
         except Exception as e:
@@ -92,12 +79,6 @@ class InventoryService:
     def get_inventory_by_sku(self, sku: str) -> Optional[Dict[str, Any]]:
         """Get inventory item by SKU with product details"""
         try:
-            # Try cache first
-            cache_key = cache_key_generator('inventory', sku)
-            cached_result = get_from_cache(cache_key, self.redis)
-            if cached_result:
-                return cached_result
-            
             inventory_item = self.inventory_repo.get_by_sku(sku)
             if not inventory_item:
                 return None
@@ -112,9 +93,6 @@ class InventoryService:
             except Exception as e:
                 logger.warning(f"Failed to fetch product details for {inventory_item.product_id}: {e}")
             
-            # Cache the result
-            set_cache(cache_key, result, 600, self.redis)  # 10 minutes TTL
-            
             return result
             
         except Exception as e:
@@ -124,12 +102,6 @@ class InventoryService:
     def get_inventory_by_product_id(self, product_id: str) -> Optional[Dict[str, Any]]:
         """Get inventory item by product ID"""
         try:
-            # Try cache first
-            cache_key = cache_key_generator('inventory_pid', product_id)
-            cached_result = get_from_cache(cache_key, self.redis)
-            if cached_result:
-                return cached_result
-            
             inventory_item = self.inventory_repo.get_by_product_id(product_id)
             if not inventory_item:
                 return None
@@ -143,9 +115,6 @@ class InventoryService:
                     result['product'] = product_details
             except Exception as e:
                 logger.warning(f"Failed to fetch product details for {inventory_item.product_id}: {e}")
-            
-            # Cache the result
-            set_cache(cache_key, result, 600, self.redis)  # 10 minutes TTL
             
             return result
             
