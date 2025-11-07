@@ -21,7 +21,7 @@ class MessageBrokerPublisher:
     def __init__(self):
         self.broker_url = os.getenv('MESSAGE_BROKER_SERVICE_URL', 'http://localhost:4000')
         self.api_key = os.getenv('MESSAGE_BROKER_API_KEY', '')
-        self.service_name = os.getenv('SERVICE_NAME', 'inventory-service')
+        self.service_name = os.getenv('NAME', 'inventory-service')
         self.event_version = os.getenv('EVENT_VERSION', '1.0')
         
     async def publish(

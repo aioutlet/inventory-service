@@ -77,10 +77,10 @@ VALIDATION_RULES = {
         'error_message': 'FLASK_APP must be a non-empty string if provided',
         'default': 'run.py',
     },
-    'SERVICE_NAME': {
+    'NAME': {
         'required': False,
         'validator': lambda v: not v or len(v) > 0,
-        'error_message': 'SERVICE_NAME must be a non-empty string',
+        'error_message': 'NAME must be a non-empty string',
         'default': 'inventory-service',
     },
     
