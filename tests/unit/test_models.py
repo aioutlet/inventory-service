@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime, timedelta
-from src.shared.models import InventoryItem, Reservation, StockMovement, StockMovementType, ReservationStatus
+from src.models import InventoryItem, Reservation, StockMovement, StockMovementType, ReservationStatus
 from tests.conftest import create_test_inventory_item, create_test_reservation, create_test_stock_movement
 
 

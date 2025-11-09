@@ -5,8 +5,8 @@ Inventory Controller - Handles inventory CRUD operations and stock management
 from flask import request, g
 from flask_restx import Resource, fields
 from marshmallow import ValidationError
-from src.shared.services import InventoryService
-from src.shared.utils.validators import (
+from src.services import InventoryService
+from src.utils.schemas import (
     InventoryItemRequestSchema, InventoryItemResponseSchema,
     StockAdjustmentRequestSchema, StockMovementResponseSchema,
     InventorySearchSchema, BulkOperationRequestSchema

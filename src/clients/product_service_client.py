@@ -1,3 +1,7 @@
+"""
+Product Service Client
+External client for communicating with product service
+"""
 import requests
 from typing import Optional, Dict, Any
 from flask import current_app
@@ -68,3 +72,7 @@ class ProductServiceClient:
         except Exception as e:
             logger.error(f"Error in batch product fetch: {e}")
             return {}
+    
+    def get_product(self, product_id: str) -> Optional[Dict[str, Any]]:
+        """Alias for get_product_by_id for consistency"""
+        return self.get_product_by_id(product_id)

@@ -3,8 +3,8 @@ Inventory Repository Implementation
 """
 
 from typing import List, Optional
-from src.shared.database import db
-from src.shared.models import InventoryItem, StockMovement, StockMovementType
+from src.database import db
+from src.models import InventoryItem, StockMovement, StockMovementType
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_

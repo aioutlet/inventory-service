@@ -1,13 +1,12 @@
 """
-Order Event Consumer for Inventory Service
+Order Event Consumer for InventoryItem Service
 Handles events from order-service
 """
 
 from flask import current_app
 from typing import Dict, Any, List
-from src.shared.database import db
-from src.shared.models.inventory import Inventory
-from src.shared.models.reservation import InventoryReservation
+from src.database import db
+from src.models import InventoryItem, Reservation
 from src.events.publisher import event_publisher
 from datetime import datetime, timedelta
 import uuid
@@ -61,21 +60,21 @@ def handle_order_created(event_data: Dict[str, Any]) -> Dict[str, Any]:
                 continue
             
             # Find inventory
-            inventory = Inventory.query.filter_by(
+            inventory = InventoryItem.query.filter_by(
                 product_id=product_id,
                 is_active=True
             ).with_for_update().first()
             
             if not inventory:
                 current_app.logger.error(
-                    f"❌ Inventory not found for product: {product_id}",
+                    f"❌ InventoryItem not found for product: {product_id}",
                     extra={"correlationId": correlation_id}
                 )
                 # Rollback and fail the entire reservation
                 db.session.rollback()
                 return {
                     "status": "error",
-                    "message": f"Inventory not found for product {product_id}"
+                    "message": f"InventoryItem not found for product {product_id}"
                 }
             
             # Check available stock
@@ -94,7 +93,7 @@ def handle_order_created(event_data: Dict[str, Any]) -> Dict[str, Any]:
             
             # Create reservation
             reservation_id = str(uuid.uuid4())
-            reservation = InventoryReservation(
+            reservation = Reservation(
                 id=reservation_id,
                 product_id=product_id,
                 order_id=order_id,
@@ -173,7 +172,7 @@ def handle_order_cancelled(event_data: Dict[str, Any]) -> Dict[str, Any]:
         )
         
         # Find all reservations for this order
-        reservations = InventoryReservation.query.filter_by(
+        reservations = Reservation.query.filter_by(
             order_id=order_id,
             status='reserved'
         ).all()
@@ -189,7 +188,7 @@ def handle_order_cancelled(event_data: Dict[str, Any]) -> Dict[str, Any]:
         
         for reservation in reservations:
             # Find inventory
-            inventory = Inventory.query.filter_by(
+            inventory = InventoryItem.query.filter_by(
                 product_id=reservation.product_id
             ).with_for_update().first()
             
@@ -261,7 +260,7 @@ def handle_order_completed(event_data: Dict[str, Any]) -> Dict[str, Any]:
         )
         
         # Find all reservations for this order
-        reservations = InventoryReservation.query.filter_by(
+        reservations = Reservation.query.filter_by(
             order_id=order_id,
             status='reserved'
         ).all()
@@ -277,7 +276,7 @@ def handle_order_completed(event_data: Dict[str, Any]) -> Dict[str, Any]:
         
         for reservation in reservations:
             # Find inventory
-            inventory = Inventory.query.filter_by(
+            inventory = InventoryItem.query.filter_by(
                 product_id=reservation.product_id
             ).with_for_update().first()
             

@@ -2,8 +2,8 @@ import pytest
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
 
-from src.shared.services import InventoryService, ReservationService
-from src.shared.models import InventoryItem, Reservation, StockMovementType, ReservationStatus
+from src.services import InventoryService
+from src.models import InventoryItem, Reservation, StockMovementType, ReservationStatus
 from tests.conftest import create_test_inventory_item, create_test_reservation
 
 
@@ -177,11 +177,11 @@ class TestInventoryService:
 
 
 class TestReservationService:
-    """Test ReservationService business logic."""
+    """Test reservation methods in InventoryService."""
     
     def test_create_reservation(self, db_session):
         """Test creating a reservation."""
-        service = ReservationService()
+        service = InventoryService()
         item = create_test_inventory_item(db_session, sku='RESERVE001', quantity_available=100)
         
         reservation = service.create_reservation(
@@ -196,7 +196,7 @@ class TestReservationService:
     
     def test_create_reservation_insufficient_stock(self, db_session):
         """Test creating reservation with insufficient stock."""
-        service = ReservationService()
+        service = InventoryService()
         create_test_inventory_item(db_session, sku='LOW001', quantity_available=5)
         
         with pytest.raises(ValueError, match="Insufficient stock"):
@@ -208,7 +208,7 @@ class TestReservationService:
     
     def test_confirm_reservation(self, db_session):
         """Test confirming a reservation."""
-        service = ReservationService()
+        service = InventoryService()
         inventory_item = create_test_inventory_item(db_session, sku='CONFIRM001')
         
         # Create reservation
@@ -225,7 +225,7 @@ class TestReservationService:
     
     def test_cancel_reservation(self, db_session):
         """Test cancelling a reservation."""
-        service = ReservationService()
+        service = InventoryService()
         inventory_item = create_test_inventory_item(db_session, sku='CANCEL001')
         
         # Create reservation
@@ -242,7 +242,7 @@ class TestReservationService:
     
     def test_confirm_reservations_bulk(self, db_session):
         """Test bulk confirming reservations."""
-        service = ReservationService()
+        service = InventoryService()
         inventory_item = create_test_inventory_item(db_session, sku='BULK-RES001')
         
         # Create reservations
@@ -256,7 +256,7 @@ class TestReservationService:
     
     def test_search_reservations(self, db_session):
         """Test searching reservations."""
-        service = ReservationService()
+        service = InventoryService()
         inventory_item = create_test_inventory_item(db_session, sku='SEARCH-RES001')
         
         # Create reservations
@@ -269,7 +269,7 @@ class TestReservationService:
     
     def test_expire_reservations(self, db_session):
         """Test processing expired reservations."""
-        service = ReservationService()
+        service = InventoryService()
         
         # This is mostly a system process, so just test it doesn't error
         result = service.expire_reservations()
@@ -279,7 +279,7 @@ class TestReservationService:
     
     def test_get_reservation_not_found(self, db_session):
         """Test getting non-existent reservation."""
-        service = ReservationService()
+        service = InventoryService()
         
         result = service.get_reservation('non-existent-id')
         
@@ -287,7 +287,7 @@ class TestReservationService:
     
     def test_confirm_reservation_wrong_order(self, db_session):
         """Test confirming reservation with wrong order ID."""
-        service = ReservationService()
+        service = InventoryService()
         inventory_item = create_test_inventory_item(db_session, sku='WRONG-ORDER')
         
         # Create reservation

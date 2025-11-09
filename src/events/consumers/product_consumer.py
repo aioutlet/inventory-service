@@ -1,12 +1,12 @@
 """
-Product Event Consumer for Inventory Service
+Product Event Consumer for InventoryItem Service
 Handles events from product-service
 """
 
 from flask import current_app
 from typing import Dict, Any
-from src.shared.database import db
-from src.shared.models.inventory import Inventory
+from src.database import db
+from src.models import InventoryItem
 from src.events.publisher import event_publisher
 
 
@@ -40,16 +40,16 @@ def handle_product_created(event_data: Dict[str, Any]) -> Dict[str, Any]:
         )
         
         # Check if inventory already exists
-        existing_inventory = Inventory.query.filter_by(product_id=product_id).first()
+        existing_inventory = InventoryItem.query.filter_by(product_id=product_id).first()
         if existing_inventory:
             current_app.logger.warning(
-                f"⚠️ Inventory already exists for product: {product_id}",
+                f"⚠️ InventoryItem already exists for product: {product_id}",
                 extra={"correlationId": correlation_id}
             )
-            return {"status": "skipped", "message": "Inventory already exists"}
+            return {"status": "skipped", "message": "InventoryItem already exists"}
         
         # Create new inventory record with zero initial stock
-        new_inventory = Inventory(
+        new_inventory = InventoryItem(
             product_id=product_id,
             quantity=0,  # Start with zero, admin will add stock later
             reserved_quantity=0,
@@ -74,7 +74,7 @@ def handle_product_created(event_data: Dict[str, Any]) -> Dict[str, Any]:
         
         return {
             "status": "success",
-            "message": f"Inventory created for product {product_id}"
+            "message": f"InventoryItem created for product {product_id}"
         }
         
     except Exception as e:
@@ -116,13 +116,13 @@ def handle_product_updated(event_data: Dict[str, Any]) -> Dict[str, Any]:
         )
         
         # Find inventory record
-        inventory = Inventory.query.filter_by(product_id=product_id).first()
+        inventory = InventoryItem.query.filter_by(product_id=product_id).first()
         if not inventory:
             current_app.logger.warning(
-                f"⚠️ Inventory not found for product: {product_id}",
+                f"⚠️ InventoryItem not found for product: {product_id}",
                 extra={"correlationId": correlation_id}
             )
-            return {"status": "not_found", "message": "Inventory not found"}
+            return {"status": "not_found", "message": "InventoryItem not found"}
         
         # Update product metadata if needed (SKU, etc.)
         # For now, just log the update
@@ -135,7 +135,7 @@ def handle_product_updated(event_data: Dict[str, Any]) -> Dict[str, Any]:
         
         return {
             "status": "success",
-            "message": f"Inventory updated for product {product_id}"
+            "message": f"InventoryItem updated for product {product_id}"
         }
         
     except Exception as e:
@@ -174,13 +174,13 @@ def handle_product_deleted(event_data: Dict[str, Any]) -> Dict[str, Any]:
         )
         
         # Find inventory record
-        inventory = Inventory.query.filter_by(product_id=product_id).first()
+        inventory = InventoryItem.query.filter_by(product_id=product_id).first()
         if not inventory:
             current_app.logger.warning(
-                f"⚠️ Inventory not found for product: {product_id}",
+                f"⚠️ InventoryItem not found for product: {product_id}",
                 extra={"correlationId": correlation_id}
             )
-            return {"status": "not_found", "message": "Inventory not found"}
+            return {"status": "not_found", "message": "InventoryItem not found"}
         
         # Soft delete or archive (don't actually delete to preserve history)
         inventory.is_active = False
@@ -193,7 +193,7 @@ def handle_product_deleted(event_data: Dict[str, Any]) -> Dict[str, Any]:
         
         return {
             "status": "success",
-            "message": f"Inventory archived for product {product_id}"
+            "message": f"InventoryItem archived for product {product_id}"
         }
         
     except Exception as e:

@@ -3,7 +3,7 @@ Models package - Database models for inventory service
 """
 
 # Import database instance
-from src.shared.database import db
+from src.database import db
 
 # Import enums first
 from .enums import ReservationStatus, StockMovementType

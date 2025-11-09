@@ -2,7 +2,7 @@
 Stock Movement Model
 """
 
-from src.shared.database import db
+from src.database import db
 from datetime import datetime
 from .enums import StockMovementType
 

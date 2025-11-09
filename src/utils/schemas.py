@@ -1,6 +1,6 @@
 from marshmallow import Schema, fields, validate, post_load, ValidationError
 from datetime import datetime
-from src.shared.models import StockMovementType
+from src.models import StockMovementType
 
 
 class InventoryItemRequestSchema(Schema):

@@ -4,7 +4,7 @@ Controllers package initialization - Sets up Flask-RESTX API with all namespaces
 
 from flask import Blueprint
 from flask_restx import Api
-from src.shared.utils.error_handlers import register_error_handlers
+from src.utils.error_handlers import register_error_handlers
 from src.api.controllers.operational import operational_ns
 from src.api.controllers.inventory import register_inventory_routes
 from src.api.controllers.reservations import register_reservation_routes

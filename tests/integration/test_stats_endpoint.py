@@ -6,8 +6,8 @@ Tests the stats endpoint with real database queries
 import pytest
 from flask import Flask
 from src.api.main import create_app
-from src.shared.database import db
-from src.shared.models import InventoryItem
+from src.database import db
+from src.models import InventoryItem
 
 
 @pytest.fixture

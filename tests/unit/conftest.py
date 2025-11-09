@@ -11,7 +11,7 @@ os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['REDIS_URL'] = 'redis://localhost:6379/1'
 
 from src.api.main import create_app
-from src.shared.models import db, InventoryItem, Reservation, StockMovement, StockMovementType, ReservationStatus
+from src.models import db, InventoryItem, Reservation, StockMovement, StockMovementType, ReservationStatus
 
 
 @pytest.fixture(scope='session')

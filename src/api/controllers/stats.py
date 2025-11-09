@@ -3,7 +3,7 @@ Stats Controller - Provides inventory statistics for dashboards
 """
 
 from flask import Blueprint, jsonify
-from src.shared.repositories.inventory_repository import InventoryRepository
+from src.repositories.inventory_repository import InventoryRepository
 import logging
 
 logger = logging.getLogger(__name__)

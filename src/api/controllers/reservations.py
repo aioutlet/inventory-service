@@ -5,8 +5,8 @@ Reservations Controller - Handles inventory reservation operations
 from flask import request
 from flask_restx import Resource, fields
 from marshmallow import ValidationError
-from src.shared.services import InventoryService
-from src.shared.utils.validators import (
+from src.services import InventoryService
+from src.utils.schemas import (
     ReservationRequestSchema, ReservationResponseSchema,
     ReservationConfirmRequestSchema
 )

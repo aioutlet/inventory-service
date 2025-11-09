@@ -2,7 +2,7 @@
 Reservation Model
 """
 
-from src.shared.database import db
+from src.database import db
 from datetime import datetime
 import uuid
 from .enums import ReservationStatus
@@ -32,7 +32,7 @@ class Reservation(db.Model):
     @property
     def product_id(self):
         """Get product_id from associated inventory item"""
-        from src.shared.models.inventory_item import InventoryItem
+        from src.models.inventory_item import InventoryItem
         item = InventoryItem.query.filter_by(sku=self.sku).first()
         return item.product_id if item else None
     

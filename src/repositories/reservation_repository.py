@@ -3,8 +3,8 @@ Reservation Repository Implementation
 """
 
 from typing import List, Optional
-from src.shared.database import db
-from src.shared.models import Reservation, ReservationStatus
+from src.database import db
+from src.models import Reservation, ReservationStatus
 from datetime import datetime
 from sqlalchemy import and_
 from .base import ReservationRepositoryInterface

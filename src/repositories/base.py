@@ -4,7 +4,7 @@ Base Repository Interface - Abstract base classes
 
 from abc import ABC, abstractmethod
 from typing import List, Optional
-from src.shared.models import InventoryItem, Reservation, StockMovement, ReservationStatus, StockMovementType
+from src.models import InventoryItem, Reservation, StockMovement, ReservationStatus, StockMovementType
 from datetime import datetime
 
 

@@ -10,7 +10,7 @@ import time
 import os
 import psutil
 import logging
-from src.shared.utils.health_checks import (
+from src.utils.health_checks import (
     perform_readiness_check, 
     perform_liveness_check, 
     get_system_metrics

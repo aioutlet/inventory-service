@@ -9,7 +9,7 @@ import psutil
 import requests
 from datetime import datetime
 from sqlalchemy import text
-from src.shared.database import db
+from src.database import db
 import logging
 
 logger = logging.getLogger(__name__)

@@ -2,7 +2,7 @@ import pytest
 import json
 from datetime import datetime, timedelta
 
-from src.shared.models import InventoryItem, Reservation, StockMovementType, ReservationStatus
+from src.models import InventoryItem, Reservation, StockMovementType, ReservationStatus
 from tests.conftest import create_test_inventory_item, create_test_reservation
 
 
