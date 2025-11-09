@@ -57,6 +57,14 @@ def create_app(config_name='default'):
     except Exception as e:
         app.logger.warning(f"Controller registration failed: {e}. Running without API endpoints.")
     
+    # Register Dapr events blueprint
+    try:
+        from src.api.controllers.events import events_bp
+        app.register_blueprint(events_bp)
+        app.logger.info("✅ Dapr events blueprint registered successfully")
+    except Exception as e:
+        app.logger.warning(f"⚠️  Dapr events blueprint registration failed: {e}. Running without event handling.")
+    
     # Register operational endpoints
     try:
         from src.api.controllers.operational import Health, Readiness, Liveness, Metrics

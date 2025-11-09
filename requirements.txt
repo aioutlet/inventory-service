@@ -22,6 +22,10 @@ aiohttp==3.10.11
 aio-pika==9.5.7
 aiokafka==0.12.0
 
+# Dapr SDK
+dapr==1.14.0
+dapr-ext-grpc==1.14.0
+
 # System monitoring
 psutil==6.0.0
 

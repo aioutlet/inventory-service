@@ -1,0 +1,30 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: inventory-pubsub
+spec:
+  type: pubsub.rabbitmq
+  version: v1
+  metadata:
+    - name: connectionString
+      value: 'amqp://admin:admin123@localhost:5672'
+    - name: consumerID
+      value: 'inventory-service'
+    - name: durable
+      value: 'true'
+    - name: deletedWhenUnused
+      value: 'false'
+    - name: autoAck
+      value: 'false'
+    - name: deliveryMode
+      value: '2'
+    - name: requeueInFailure
+      value: 'true'
+    - name: prefetchCount
+      value: '10'
+    - name: reconnectWait
+      value: '5s'
+    - name: exchangeKind
+      value: 'topic'
+scopes:
+  - inventory-service

@@ -2,7 +2,7 @@
 Inventory Controller - Handles inventory CRUD operations and stock management
 """
 
-from flask import request
+from flask import request, g
 from flask_restx import Resource, fields
 from marshmallow import ValidationError
 from src.shared.services import InventoryService
@@ -11,6 +11,7 @@ from src.shared.utils.validators import (
     StockAdjustmentRequestSchema, StockMovementResponseSchema,
     InventorySearchSchema, BulkOperationRequestSchema
 )
+from src.events.publisher import event_publisher
 import logging
 
 logger = logging.getLogger(__name__)
@@ -97,6 +98,14 @@ def register_inventory_routes(api, namespace):
                 inventory_service = InventoryService()
                 item = inventory_service.create_inventory_item(**data)
                 
+                # Publish inventory.created event
+                correlation_id = getattr(g, 'correlation_id', None)
+                event_publisher.publish_inventory_created(
+                    product_id=item.product_id,
+                    initial_quantity=item.quantity,
+                    correlation_id=correlation_id
+                )
+                
                 # Serialize response
                 result = inventory_response_schema.dump(item)
                 return result, 201
@@ -143,6 +152,14 @@ def register_inventory_routes(api, namespace):
                 if not item:
                     return {'error': 'Inventory item not found'}, 404
                 
+                # Publish inventory.stock.updated event
+                correlation_id = getattr(g, 'correlation_id', None)
+                event_publisher.publish_stock_updated(
+                    product_id=item.product_id,
+                    quantity=item.quantity,
+                    correlation_id=correlation_id
+                )
+                
                 result = inventory_response_schema.dump(item)
                 return result, 200
                 
@@ -186,6 +203,31 @@ def register_inventory_routes(api, namespace):
                 
                 if not movement:
                     return {'error': 'Failed to adjust stock'}, 400
+                
+                # Get updated inventory to publish event
+                item = inventory_service.get_inventory_by_product_id(product_id)
+                if item:
+                    correlation_id = getattr(g, 'correlation_id', None)
+                    event_publisher.publish_stock_updated(
+                        product_id=item.product_id,
+                        quantity=item.quantity,
+                        correlation_id=correlation_id
+                    )
+                    
+                    # Check for low stock alert
+                    if item.quantity <= item.low_stock_threshold:
+                        if item.quantity == 0:
+                            event_publisher.publish_out_of_stock_alert(
+                                product_id=item.product_id,
+                                correlation_id=correlation_id
+                            )
+                        else:
+                            event_publisher.publish_low_stock_alert(
+                                product_id=item.product_id,
+                                current_quantity=item.quantity,
+                                threshold=item.low_stock_threshold,
+                                correlation_id=correlation_id
+                            )
                 
                 result = stock_movement_schema.dump(movement)
                 return result, 200
