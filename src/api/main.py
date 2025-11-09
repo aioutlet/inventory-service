@@ -65,6 +65,14 @@ def create_app(config_name='default'):
     except Exception as e:
         app.logger.warning(f"⚠️  Dapr events blueprint registration failed: {e}. Running without event handling.")
     
+    # Register stats blueprint
+    try:
+        from src.api.controllers.stats import stats_bp
+        app.register_blueprint(stats_bp)
+        app.logger.info("✅ Stats blueprint registered successfully")
+    except Exception as e:
+        app.logger.warning(f"⚠️  Stats blueprint registration failed: {e}. Running without stats endpoint.")
+    
     # Register operational endpoints
     try:
         from src.api.controllers.operational import Health, Readiness, Liveness, Metrics

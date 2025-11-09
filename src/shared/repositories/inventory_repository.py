@@ -196,3 +196,49 @@ class InventoryRepository(InventoryRepositoryInterface):
     def get_stock_movements(self, sku: str) -> List[StockMovement]:
         """Get stock movements for a SKU"""
         return StockMovement.query.filter_by(sku=sku).order_by(StockMovement.created_at.desc()).all()
+
+    def count_low_stock(self) -> int:
+        """Count items below reorder level"""
+        return InventoryItem.query.filter(
+            InventoryItem.quantity_available < InventoryItem.reorder_level
+        ).count()
+
+    def count_out_of_stock(self) -> int:
+        """Count items with zero quantity"""
+        return InventoryItem.query.filter(
+            InventoryItem.quantity_available == 0
+        ).count()
+
+    def count_products_with_stock(self) -> int:
+        """Count items with quantity > 0"""
+        return InventoryItem.query.filter(
+            InventoryItem.quantity_available > 0
+        ).count()
+
+    def count_total(self) -> int:
+        """Count total inventory items"""
+        return InventoryItem.query.count()
+
+    def calculate_total_value(self) -> float:
+        """Calculate total inventory value (sum of quantity * cost_per_unit)"""
+        from sqlalchemy import func
+        result = db.session.query(
+            func.sum(InventoryItem.quantity_available * InventoryItem.cost_per_unit)
+        ).filter(
+            InventoryItem.cost_per_unit.isnot(None)
+        ).scalar()
+        return float(result) if result else 0.0
+
+    def calculate_total_units(self) -> int:
+        """Calculate total units in inventory"""
+        from sqlalchemy import func
+        result = db.session.query(
+            func.sum(InventoryItem.quantity_available)
+        ).scalar()
+        return int(result) if result else 0
+
+    def get_recent_movements(self, limit: int = 10) -> List[StockMovement]:
+        """Get recent stock movements"""
+        return StockMovement.query.order_by(
+            StockMovement.created_at.desc()
+        ).limit(limit).all()
