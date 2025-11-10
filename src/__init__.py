@@ -18,14 +18,21 @@ def create_app(config_name='default'):
     from dotenv import load_dotenv
     load_dotenv()
     
-    # Initialize correlation ID middleware
-    from src.api.middlewares.correlation_id import CorrelationIdMiddleware, init_correlation_id_logging
-    correlation_middleware = CorrelationIdMiddleware(app)
-    init_correlation_id_logging(app)
+    # Initialize OpenTelemetry tracing BEFORE creating middleware
+    from src.utils.telemetry import init_telemetry
+    init_telemetry(app)
+    
+    # Initialize W3C Trace Context middleware (replaces correlation_id)
+    from src.api.middlewares.trace_context import TraceContextMiddleware
+    trace_middleware = TraceContextMiddleware(app)
     
     # Initialize database
     from src.database import init_db
     db = init_db(app)
+    
+    # Instrument application with OpenTelemetry AFTER database initialization
+    from src.utils.telemetry import instrument_app
+    instrument_app(app)
     
     # CORS setup
     CORS(app, origins=app.config.get('CORS_ORIGINS', ['*']))

@@ -10,6 +10,9 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 import uuid
 
+# Import trace context for W3C Trace Context support
+from src.api.middlewares.trace_context import get_trace_id
+
 
 class InventoryEventPublisher:
     """
@@ -43,12 +46,16 @@ class InventoryEventPublisher:
         Args:
             event_type: Event type/topic name (e.g., 'inventory.stock.updated')
             data: Event payload data
-            correlation_id: Optional correlation ID for tracing
+            correlation_id: Optional correlation ID for tracing (defaults to current trace_id)
             
         Returns:
             bool: True if published successfully, False otherwise
         """
         try:
+            # Use trace_id from context if correlation_id not provided
+            if correlation_id is None:
+                correlation_id = get_trace_id()
+            
             event_payload = self._build_event_payload(event_type, data, correlation_id)
             
             # Synchronous Dapr client call - blocks for ~5-20ms

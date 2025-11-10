@@ -44,3 +44,12 @@ isort==5.13.2
 
 # Production
 gunicorn==23.0.0
+
+# OpenTelemetry - Distributed Tracing
+opentelemetry-api>=1.20.0
+opentelemetry-sdk>=1.20.0
+opentelemetry-exporter-otlp-proto-http>=1.20.0
+opentelemetry-instrumentation-flask>=0.41b0
+opentelemetry-instrumentation-requests>=0.41b0
+opentelemetry-instrumentation-sqlalchemy>=0.41b0
+opentelemetry-instrumentation-logging>=0.41b0

@@ -35,7 +35,7 @@ fi
 
 # Configuration
 APP_ID="inventory-service"
-APP_PORT=5002
+APP_PORT=5000
 DAPR_HTTP_PORT=3502
 DAPR_GRPC_PORT=50002
 COMPONENTS_PATH="./.dapr/components"
