@@ -50,7 +50,7 @@ def main():
     
     # Get host and port from environment
     host = os.environ.get('HOST', '0.0.0.0')
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 1005))
     debug = env == 'development'
     
     logger.info(f"Starting Inventory Service on {host}:{port}")

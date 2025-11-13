@@ -30,8 +30,8 @@ class Config:
     # Reservation settings
     RESERVATION_TTL_MINUTES = int(os.environ.get('RESERVATION_TTL_MINUTES', 30))
     
-    # Service URLs
-    PRODUCT_SERVICE_URL = os.environ.get('PRODUCT_SERVICE_URL', 'http://localhost:3001')
+    # Dapr service app IDs
+    DAPR_PRODUCT_SERVICE_APP_ID = os.environ.get('DAPR_PRODUCT_SERVICE_APP_ID', 'product-service')
     
     # Pagination
     DEFAULT_PAGE_SIZE = int(os.environ.get('DEFAULT_PAGE_SIZE', 20))
@@ -40,8 +40,7 @@ class Config:
     # Logging
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
     
-    # CORS
-    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '*').split(',')
+
 
 
 class DevelopmentConfig(Config):

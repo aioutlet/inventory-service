@@ -17,7 +17,7 @@ class DaprSecretManager:
         self.secret_store_name = os.getenv('DAPR_SECRET_STORE_NAME', 'local-secret-store')
         self.dapr_client = DaprClient()
     
-    def get_secret(self, key: str) -> Optional[str]:
+    def get_secret(self, key: str) -> str:
         """
         Get a single secret value from Dapr Secret Store
         
@@ -25,7 +25,10 @@ class DaprSecretManager:
             key: Secret key to retrieve
             
         Returns:
-            Secret value or None if not found
+            Secret value
+            
+        Raises:
+            Exception if secret not found or error occurs
         """
         try:
             secret_response = self.dapr_client.get_secret(
@@ -34,14 +37,15 @@ class DaprSecretManager:
             )
             
             if secret_response and secret_response.secret:
-                return secret_response.secret.get(key)
+                value = secret_response.secret.get(key)
+                if value:
+                    return value
             
-            logger.warning(f"Secret '{key}' not found in store '{self.secret_store_name}'")
-            return None
+            raise Exception(f"Secret '{key}' not found in store '{self.secret_store_name}'")
             
         except Exception as e:
             logger.error(f"Error retrieving secret '{key}': {str(e)}")
-            return None
+            raise
     
     def get_database_config(self) -> Dict[str, Any]:
         """
@@ -51,12 +55,12 @@ class DaprSecretManager:
             Dictionary with database configuration
         """
         return {
-            'host': self.get_secret('DATABASE_HOST') or 'localhost',
-            'port': int(self.get_secret('DATABASE_PORT') or '3306'),
-            'database': self.get_secret('MYSQL_DATABASE') or 'inventory_service_db',
-            'user': self.get_secret('MYSQL_USER') or 'admin',
-            'password': self.get_secret('MYSQL_PASSWORD') or 'admin123',
-            'root_password': self.get_secret('MYSQL_ROOT_PASSWORD') or 'inventory_root_pass_123'
+            'host': self.get_secret('DATABASE_HOST'),
+            'port': int(self.get_secret('DATABASE_PORT')),
+            'database': self.get_secret('MYSQL_DATABASE'),
+            'user': self.get_secret('MYSQL_USER'),
+            'password': self.get_secret('MYSQL_PASSWORD'),
+            'root_password': self.get_secret('MYSQL_ROOT_PASSWORD')
         }
     
     def get_jwt_config(self) -> Dict[str, Any]:
@@ -67,20 +71,9 @@ class DaprSecretManager:
             Dictionary with JWT configuration
         """
         return {
-            'secret': self.get_secret('JWT_SECRET') or '8tDBDMcpxroHoHjXjk8xp/uAn8rzD4y8ZZremFkC4gI='
+            'secret': self.get_secret('JWT_SECRET')
         }
-    
-    def get_service_urls(self) -> Dict[str, str]:
-        """
-        Get external service URLs from configuration
-        
-        Returns:
-            Dictionary with service URLs
-        """
-        return {
-            'product_service': self.get_secret('PRODUCT_SERVICE_URL') or 'http://localhost:8003',
-            'product_service_health': self.get_secret('PRODUCT_SERVICE_HEALTH_URL') or 'http://localhost:8003/health'
-        }
+
 
 
 # Singleton instance
@@ -106,6 +99,3 @@ def get_jwt_config() -> Dict[str, Any]:
     return get_secret_manager().get_jwt_config()
 
 
-def get_service_urls() -> Dict[str, str]:
-    """Get service URLs"""
-    return get_secret_manager().get_service_urls()

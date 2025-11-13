@@ -31,7 +31,7 @@ def health():
     }), 200
 
 
-@health_bp.route('/health/ready', methods=['GET'])
+@health_bp.route('/readiness', methods=['GET'])
 def readiness():
     """Readiness probe - checks if service is ready to handle traffic"""
     try:
@@ -66,7 +66,7 @@ def readiness():
         }), 503
 
 
-@health_bp.route('/health/live', methods=['GET'])
+@health_bp.route('/liveness', methods=['GET'])
 def liveness():
     """Liveness probe - checks if service is alive and responsive"""
     try:

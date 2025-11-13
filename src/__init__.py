@@ -2,7 +2,6 @@ import os
 import sys
 import logging
 from flask import Flask
-from flask_cors import CORS
 from src.models import db
 
 
@@ -18,24 +17,13 @@ def create_app(config_name='default'):
     from dotenv import load_dotenv
     load_dotenv()
     
-    # Initialize OpenTelemetry tracing BEFORE creating middleware
-    from src.utils.telemetry import init_telemetry
-    init_telemetry(app)
-    
-    # Initialize W3C Trace Context middleware (replaces correlation_id)
+    # Initialize W3C Trace Context middleware
     from src.api.middlewares.trace_context import TraceContextMiddleware
     trace_middleware = TraceContextMiddleware(app)
     
     # Initialize database
     from src.database import init_db
     db = init_db(app)
-    
-    # Instrument application with OpenTelemetry AFTER database initialization
-    from src.utils.telemetry import instrument_app
-    instrument_app(app)
-    
-    # CORS setup
-    CORS(app, origins=app.config.get('CORS_ORIGINS', ['*']))
     
     # Configure logging
     if not app.testing:
@@ -51,6 +39,14 @@ def create_app(config_name='default'):
         app.logger.info("API controllers registered successfully")
     except Exception as e:
         app.logger.warning(f"API controller registration failed: {e}. Running without API endpoints.")
+    
+    # Register home endpoints blueprint
+    try:
+        from src.api.controllers.home import home_bp
+        app.register_blueprint(home_bp)
+        app.logger.info("Home endpoints registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Home endpoints registration failed: {e}")
     
     # Register health endpoints blueprint
     try:

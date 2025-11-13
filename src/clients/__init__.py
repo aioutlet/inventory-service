@@ -9,8 +9,7 @@ from src.clients.dapr_secret_manager import (
     DaprSecretManager, 
     get_secret_manager, 
     get_database_config, 
-    get_jwt_config,
-    get_service_urls
+    get_jwt_config
 )
 
 # HTTP clients
@@ -24,7 +23,6 @@ __all__ = [
     'get_secret_manager',
     'get_database_config',
     'get_jwt_config',
-    'get_service_urls',
     
     # HTTP clients
     'ProductServiceClient',

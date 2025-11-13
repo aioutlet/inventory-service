@@ -1,0 +1,39 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dapr-start-inventory",
+      "type": "shell",
+      "command": "dapr run --app-id inventory-service --app-port 1005 --dapr-http-port 3505 --dapr-grpc-port 50005 --log-level warn --config ./.dapr/config.yaml --resources-path ./.dapr/components",
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": [
+          {
+            "regexp": ".",
+            "file": 1,
+            "location": 2,
+            "message": 3
+          }
+        ],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*Starting Dapr.*",
+          "endsPattern": "^.*You're up and running!.*"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "dapr-stop-inventory",
+      "type": "shell",
+      "command": "dapr stop --app-id inventory-service",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    }
+  ]
+}

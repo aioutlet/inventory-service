@@ -1,72 +1,49 @@
 """
 Product Service Client
-External client for communicating with product service
+External client for communicating with product service via Dapr
 """
-import requests
+import os
 from typing import Optional, Dict, Any
-from flask import current_app
 import logging
+from src.clients.dapr_service_client import get_dapr_service_client
 
 logger = logging.getLogger(__name__)
 
 
 class ProductServiceClient:
-    """Client for communicating with product service"""
+    """Client for communicating with product service via Dapr"""
     
-    def __init__(self, base_url: str = None):
-        self._base_url = base_url
-        self.timeout = 5  # seconds
-    
-    @property
-    def base_url(self):
-        """Get base URL, using Flask config if not provided during init"""
-        if self._base_url is None:
-            try:
-                self._base_url = current_app.config.get('PRODUCT_SERVICE_URL', 'http://localhost:3001')
-            except RuntimeError:
-                # Working outside application context, use default
-                self._base_url = 'http://localhost:3001'
-        return self._base_url
+    def __init__(self, app_id: str = None):
+        self.app_id = app_id or os.environ.get('DAPR_PRODUCT_SERVICE_APP_ID', 'product-service')
+        self.dapr_client = get_dapr_service_client()
     
     def get_product_by_id(self, product_id: str) -> Optional[Dict[str, Any]]:
-        """Get product details by ID from product service"""
+        """Get product details by ID from product service via Dapr"""
         try:
-            url = f"{self.base_url}/api/v1/products/{product_id}"
-            response = requests.get(url, timeout=self.timeout)
+            method = f"api/v1/products/{product_id}"
+            response = self.dapr_client.invoke_get(self.app_id, method)
             
-            if response.status_code == 200:
-                return response.json()
-            elif response.status_code == 404:
+            if response:
+                return response
+            else:
                 logger.warning(f"Product {product_id} not found in product service")
                 return None
-            else:
-                logger.error(f"Product service error for {product_id}: {response.status_code}")
-                return None
                 
-        except requests.exceptions.Timeout:
-            logger.error(f"Timeout calling product service for {product_id}")
-            return None
-        except requests.exceptions.ConnectionError:
-            logger.error(f"Connection error calling product service for {product_id}")
-            return None
         except Exception as e:
-            logger.error(f"Unexpected error calling product service for {product_id}: {e}")
+            logger.error(f"Error calling product service for {product_id}: {e}")
             return None
     
     def get_products_by_ids(self, product_ids: list) -> Dict[str, Any]:
-        """Get multiple products by IDs"""
+        """Get multiple products by IDs via Dapr"""
         try:
-            url = f"{self.base_url}/api/v1/products/batch"
-            response = requests.post(
-                url, 
-                json={'product_ids': product_ids},
-                timeout=self.timeout
-            )
+            method = "api/v1/products/batch"
+            data = {'product_ids': product_ids}
+            response = self.dapr_client.invoke_post(self.app_id, method, data)
             
-            if response.status_code == 200:
-                return response.json()
+            if response:
+                return response
             else:
-                logger.error(f"Product service batch error: {response.status_code}")
+                logger.error("Product service batch request returned no data")
                 return {}
                 
         except Exception as e:
