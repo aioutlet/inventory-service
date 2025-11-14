@@ -3,17 +3,30 @@ JWT Authentication and Authorization Middleware for Inventory Service
 Provides consistent authentication and role-based access control
 """
 
-import os
 import jwt
 from functools import wraps
 from flask import request, g
 import logging
+from src.clients import get_jwt_config
 
 logger = logging.getLogger(__name__)
 
-# JWT Configuration
-JWT_SECRET = os.getenv('JWT_SECRET', 'your_jwt_secret_key')
-JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')
+# JWT Configuration - loaded from Dapr Secret Store
+_jwt_config = None
+JWT_ALGORITHM = 'HS256'
+
+
+def _get_jwt_secret():
+    """Get JWT secret from Dapr Secret Store"""
+    global _jwt_config
+    if _jwt_config is None:
+        try:
+            _jwt_config = get_jwt_config()
+            logger.info('JWT configuration loaded from Dapr Secret Store')
+        except Exception as e:
+            logger.error(f'Failed to load JWT configuration from Dapr: {str(e)}')
+            raise RuntimeError('JWT configuration not available') from e
+    return _jwt_config['secret']
 
 
 class AuthError(Exception):
@@ -44,9 +57,10 @@ def get_token_from_request():
 def decode_jwt(token):
     """Decode and validate JWT token"""
     try:
+        jwt_secret = _get_jwt_secret()
         payload = jwt.decode(
             token,
-            JWT_SECRET,
+            jwt_secret,
             algorithms=[JWT_ALGORITHM]
         )
         return payload
