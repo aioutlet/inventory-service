@@ -10,12 +10,15 @@ def create_app(config_name='default'):
     app = Flask(__name__)
     
     # Load configuration
-    from config import config
+    from config import config, get_database_uri
     app.config.from_object(config[config_name])
     
     # Load environment variables
     from dotenv import load_dotenv
     load_dotenv()
+    
+    # Set database URI from Dapr secrets (lazy loading)
+    app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri()
     
     # Initialize W3C Trace Context middleware
     from src.api.middlewares.trace_context import TraceContextMiddleware

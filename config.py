@@ -2,23 +2,36 @@ import os
 from datetime import timedelta
 
 
+def get_database_uri():
+    """
+    Lazy load database URI from Dapr secrets
+    Called when database connection is actually needed
+    """
+    try:
+        from src.clients.dapr_secret_manager import get_database_config
+        db_config = get_database_config()
+        return (
+            f"mysql+pymysql://{db_config['user']}:{db_config['password']}@"
+            f"{db_config['host']}:{db_config['port']}/{db_config['database']}"
+        )
+    except Exception as e:
+        # Fallback to environment variables if Dapr not available (for testing)
+        user = os.environ.get('MYSQL_USER', 'admin')
+        password = os.environ.get('MYSQL_PASSWORD', 'admin123')
+        host = os.environ.get('DATABASE_HOST', 'localhost')
+        port = os.environ.get('DATABASE_PORT', '3306')
+        database = os.environ.get('MYSQL_DATABASE', 'inventory_service_db')
+        return f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}"
+
+
 class Config:
     """Base configuration"""
     
     # Flask
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
     
-    # Database
-    DATABASE_HOST = os.environ.get('DATABASE_HOST', 'localhost')
-    DATABASE_PORT = int(os.environ.get('DATABASE_PORT', 3306))
-    DATABASE_USER = os.environ.get('MYSQL_USER', 'admin')
-    DATABASE_PASSWORD = os.environ.get('MYSQL_PASSWORD', 'admin123')
-    DATABASE_NAME = os.environ.get('MYSQL_DATABASE', 'inventory_service_db')
-    
-    SQLALCHEMY_DATABASE_URI = (
-        f"mysql+pymysql://{DATABASE_USER}:{DATABASE_PASSWORD}@"
-        f"{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
-    )
+    # Database - use lazy loading function instead of direct environment variables
+    SQLALCHEMY_DATABASE_URI = None  # Will be set at runtime
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
