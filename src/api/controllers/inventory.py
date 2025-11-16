@@ -118,14 +118,20 @@ def register_inventory_routes(api, namespace):
                 logger.error(f"Error creating inventory item: {e}")
                 return {'error': 'Internal server error'}, 500
 
-    @namespace.route('/<string:product_id>')
+    @namespace.route('/<string:identifier>')
     class InventoryItem(Resource):
         @api.doc('get_inventory')
-        def get(self, product_id):
-            """Get inventory item by product ID"""
+        def get(self, identifier):
+            """Get inventory item by SKU or product ID"""
             try:
                 inventory_service = InventoryService()
-                item = inventory_service.get_inventory_by_product_id(product_id)
+                
+                # Try to get by SKU first (preferred method)
+                item = inventory_service.get_inventory_by_sku(identifier)
+                
+                # Fall back to product_id if SKU not found
+                if not item:
+                    item = inventory_service.get_inventory_by_product_id(identifier)
                 
                 if not item:
                     return {'error': 'Inventory item not found'}, 404
@@ -134,20 +140,26 @@ def register_inventory_routes(api, namespace):
                 return result, 200
                 
             except Exception as e:
-                logger.error(f"Error getting inventory for product {product_id}: {e}")
+                logger.error(f"Error getting inventory for identifier {identifier}: {e}")
                 return {'error': 'Internal server error'}, 500
 
         @api.doc('update_inventory')
         @api.expect(inventory_item_model)
         @api.marshal_with(inventory_item_model)
-        def put(self, product_id):
-            """Update inventory item"""
+        def put(self, identifier):
+            """Update inventory item by SKU or product ID"""
             try:
                 # Validate request data
                 data = inventory_request_schema.load(request.json)
                 
                 inventory_service = InventoryService()
-                item = inventory_service.update_inventory_item(product_id, **data)
+                
+                # Try SKU first, fall back to product_id
+                item = inventory_service.get_inventory_by_sku(identifier)
+                if item:
+                    item = inventory_service.update_inventory_item(identifier, **data)
+                else:
+                    item = inventory_service.update_inventory_item(identifier, **data)
                 
                 if not item:
                     return {'error': 'Inventory item not found'}, 404
@@ -168,15 +180,15 @@ def register_inventory_routes(api, namespace):
             except ValueError as e:
                 return {'error': str(e)}, 400
             except Exception as e:
-                logger.error(f"Error updating inventory for product {product_id}: {e}")
+                logger.error(f"Error updating inventory: {e}")
                 return {'error': 'Internal server error'}, 500
 
         @api.doc('delete_inventory')
-        def delete(self, product_id):
+        def delete(self, identifier):
             """Delete inventory item"""
             try:
                 inventory_service = InventoryService()
-                success = inventory_service.delete_inventory_item(product_id)
+                success = inventory_service.delete_inventory_item(identifier)
                 
                 if not success:
                     return {'error': 'Inventory item not found'}, 404
@@ -184,14 +196,40 @@ def register_inventory_routes(api, namespace):
                 return {'message': 'Inventory item deleted successfully'}, 200
                 
             except Exception as e:
-                logger.error(f"Error deleting inventory for product {product_id}: {e}")
+                logger.error(f"Error deleting inventory: {e}")
                 return {'error': 'Internal server error'}, 500
 
-    @namespace.route('/<string:product_id>/adjust')
+    @namespace.route('/<string:identifier>/check')
+    class CheckInventory(Resource):
+        @api.doc('check_inventory')
+        @api.param('quantity', 'Quantity to check', type=int, required=True)
+        def get(self, identifier):
+            """Check if SKU or product has sufficient stock"""
+            try:
+                quantity = request.args.get('quantity', type=int)
+                if not quantity or quantity < 1:
+                    return {'error': 'Valid quantity parameter required'}, 400
+                
+                inventory_service = InventoryService()
+                result = inventory_service.check_availability(identifier, quantity)
+                
+                return {
+                    'success': True,
+                    'available': result['available'],
+                    'sku': identifier,
+                    'requested_quantity': quantity,
+                    'available_quantity': result.get('available_quantity', 0)
+                }, 200
+                
+            except Exception as e:
+                logger.error(f"Error checking inventory for {identifier}: {e}")
+                return {'error': 'Internal server error'}, 500
+
+    @namespace.route('/<string:identifier>/adjust')
     class StockAdjustment(Resource):
         @api.doc('adjust_stock')
         @api.expect(stock_adjustment_model)
-        def post(self, product_id):
+        def post(self, identifier):
             """Adjust stock for inventory item"""
             try:
                 # Validate request data
