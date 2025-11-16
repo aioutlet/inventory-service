@@ -340,7 +340,7 @@ class CheckAvailability(Resource):
 class BatchInventoryRetrieval(Resource):
         @api.doc('batch_inventory_retrieval')
         def post(self):
-            """Get inventory data for multiple SKUs in a single request"""
+            """Get inventory data for multiple SKUs (supports both base and variant SKUs)"""
             try:
                 # Validate request has 'skus' array
                 data = request.json
@@ -352,21 +352,53 @@ class BatchInventoryRetrieval(Resource):
                     return {'error': '"skus" must be an array'}, 400
                 
                 inventory_service = InventoryService()
-                
-                # Get inventory items by SKUs
-                inventory_items = inventory_service.inventory_repo.get_multiple_by_skus(skus)
-                
-                # Serialize response
                 result = []
-                for item in inventory_items:
-                    result.append({
-                        'sku': item.sku,
-                        'quantityAvailable': item.quantity_available,
-                        'quantityReserved': item.quantity_reserved,
-                        'reorderPoint': item.reorder_level,
-                        'reorderQuantity': item.max_stock - item.reorder_level if item.max_stock > item.reorder_level else 0,
-                        'status': 'in_stock' if item.quantity_available > 0 else 'out_of_stock'
-                    })
+                
+                for sku in skus:
+                    # Try exact match first
+                    inventory_items = inventory_service.inventory_repo.get_multiple_by_skus([sku])
+                    
+                    if inventory_items:
+                        # Exact match found - return it
+                        item = inventory_items[0]
+                        result.append({
+                            'sku': item.sku,
+                            'quantityAvailable': item.quantity_available,
+                            'quantityReserved': item.quantity_reserved,
+                            'reorderPoint': item.reorder_level,
+                            'reorderQuantity': item.max_stock - item.reorder_level if item.max_stock > item.reorder_level else 0,
+                            'status': 'in_stock' if item.quantity_available > 0 else 'out_of_stock'
+                        })
+                    else:
+                        # No exact match - check if it's a base SKU by finding variants
+                        # Base SKU pattern: BRAND-DEPT-CAT-NUM (e.g., ANT-WOM-CLO-001)
+                        # Variant SKU pattern: BRAND-DEPT-CAT-NUM-COLOR-SIZE (e.g., ANT-WOM-CLO-001-GRAY-M)
+                        variant_items = inventory_service.inventory_repo.get_variants_by_base_sku(sku)
+                        
+                        if variant_items:
+                            # Aggregate inventory across all variants
+                            total_available = sum(item.quantity_available for item in variant_items)
+                            total_reserved = sum(item.quantity_reserved for item in variant_items)
+                            
+                            result.append({
+                                'sku': sku,
+                                'quantityAvailable': total_available,
+                                'quantityReserved': total_reserved,
+                                'reorderPoint': variant_items[0].reorder_level if variant_items else 0,
+                                'reorderQuantity': variant_items[0].max_stock - variant_items[0].reorder_level if variant_items and variant_items[0].max_stock > variant_items[0].reorder_level else 0,
+                                'status': 'in_stock' if total_available > 0 else 'out_of_stock',
+                                'variantCount': len(variant_items)
+                            })
+                        else:
+                            # No inventory found for this SKU
+                            result.append({
+                                'sku': sku,
+                                'quantityAvailable': 0,
+                                'quantityReserved': 0,
+                                'reorderPoint': 0,
+                                'reorderQuantity': 0,
+                                'status': 'out_of_stock'
+                            })
                 
                 return result, 200
                 

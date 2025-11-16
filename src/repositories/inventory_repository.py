@@ -24,6 +24,10 @@ class InventoryRepository(InventoryRepositoryInterface):
         """Get multiple inventory items by SKUs"""
         return InventoryItem.query.filter(InventoryItem.sku.in_(skus)).all()
     
+    def get_variants_by_base_sku(self, base_sku: str) -> List[InventoryItem]:
+        """Get all variant inventory items matching base SKU pattern"""
+        return InventoryItem.query.filter(InventoryItem.sku.like(f"{base_sku}-%")).all()
+    
     def create(self, item: InventoryItem) -> InventoryItem:
         """Create new inventory item"""
         try:
