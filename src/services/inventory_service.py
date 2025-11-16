@@ -101,7 +101,7 @@ class InventoryService:
             logger.error(f"Error getting inventory for SKU {sku}: {str(e)}")
             raise
     
-    def get_inventory_by_product_id(self, product_id: str) -> Optional[Dict[str, Any]]:
+
         """Get inventory item by product ID"""
         try:
             inventory_item = self.inventory_repo.get_by_product_id(product_id)
@@ -129,8 +129,7 @@ class InventoryService:
         try:
             # Create new inventory item from provided data
             inventory_item = InventoryItem(
-                sku=kwargs.get('sku', f"SKU-{kwargs['product_id']}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"),
-                product_id=kwargs['product_id'],
+                sku=kwargs['sku'],  # SKU is now required
                 quantity_available=kwargs.get('quantity_available', 0),
                 quantity_reserved=kwargs.get('quantity_reserved', 0),
                 reorder_level=kwargs.get('reorder_level', 10),
@@ -150,11 +149,11 @@ class InventoryService:
             logger.error(f"Error creating inventory item: {str(e)}")
             raise
     
-    def delete_inventory_item(self, product_id: str) -> bool:
-        """Delete an inventory item by product ID"""
+    def delete_inventory_item(self, sku: str) -> bool:
+        """Delete an inventory item by SKU"""
         try:
             # Find the item first
-            inventory_item = self.inventory_repo.get_by_product_id(product_id)
+            inventory_item = self.inventory_repo.get_by_sku(sku)
             if not inventory_item:
                 return False
             
@@ -171,7 +170,7 @@ class InventoryService:
             logger.error(f"Error deleting inventory item for product {product_id}: {str(e)}")
             raise
     
-    def update_inventory_item(self, product_id: str, **kwargs) -> Dict[str, Any]:
+    def update_inventory_item(self, sku: str, **kwargs) -> Dict[str, Any]:
         """Update an inventory item"""
         try:
             inventory_item = self.inventory_repo.get_by_product_id(product_id)

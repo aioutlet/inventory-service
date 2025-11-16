@@ -15,9 +15,7 @@ class InventoryRepositoryInterface(ABC):
     def get_by_sku(self, sku: str) -> Optional[InventoryItem]:
         pass
     
-    @abstractmethod
-    def get_by_product_id(self, product_id: str) -> Optional[InventoryItem]:
-        pass
+    
     
     @abstractmethod
     def get_multiple_by_skus(self, skus: List[str]) -> List[InventoryItem]:

@@ -18,9 +18,7 @@ class InventoryRepository(InventoryRepositoryInterface):
         """Get inventory item by SKU"""
         return InventoryItem.query.filter_by(sku=sku).first()
     
-    def get_by_product_id(self, product_id: str) -> Optional[InventoryItem]:
-        """Get inventory item by product ID"""
-        return InventoryItem.query.filter_by(product_id=product_id).first()
+
     
     def get_multiple_by_skus(self, skus: List[str]) -> List[InventoryItem]:
         """Get multiple inventory items by SKUs"""
@@ -123,8 +121,7 @@ class InventoryRepository(InventoryRepositoryInterface):
         search_term = f"%{query}%"
         return InventoryItem.query.filter(
             or_(
-                InventoryItem.sku.ilike(search_term),
-                InventoryItem.product_id.ilike(search_term)
+                InventoryItem.sku.ilike(search_term)
             )
         ).limit(limit).offset(offset).all()
 
@@ -143,8 +140,7 @@ class InventoryRepository(InventoryRepositoryInterface):
         """Search inventory items with filters"""
         query = InventoryItem.query
         
-        if 'product_ids' in kwargs:
-            query = query.filter(InventoryItem.product_id.in_(kwargs['product_ids']))
+        
         
         if 'low_stock' in kwargs and kwargs['low_stock']:
             query = query.filter(InventoryItem.quantity_available <= InventoryItem.reorder_level)

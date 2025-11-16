@@ -13,7 +13,6 @@ class InventoryItem(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     sku = db.Column(db.String(100), unique=True, nullable=False, index=True)
-    product_id = db.Column(db.String(36), nullable=False, index=True)  # UUID from product service
     quantity_available = db.Column(db.Integer, default=0, nullable=False)
     quantity_reserved = db.Column(db.Integer, default=0, nullable=False)
     reorder_level = db.Column(db.Integer, default=10, nullable=False)
@@ -45,7 +44,6 @@ class InventoryItem(db.Model):
         return {
             'id': self.id,
             'sku': self.sku,
-            'product_id': self.product_id,
             'quantity_available': self.quantity_available,
             'quantity_reserved': self.quantity_reserved,
             'total_quantity': self.total_quantity,

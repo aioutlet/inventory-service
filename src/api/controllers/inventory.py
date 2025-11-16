@@ -109,8 +109,8 @@ class InventoryList(Resource):
                 # Publish inventory.created event
                 correlation_id = getattr(g, 'correlation_id', None)
                 event_publisher.publish_inventory_created(
-                    product_id=item.product_id,
-                    initial_quantity=item.quantity,
+                    product_id=item.sku,  # Using SKU as identifier
+                    initial_quantity=item.quantity_available,
                     correlation_id=correlation_id
                 )
                 
@@ -217,8 +217,8 @@ class InventoryItem(Resource):
                 # Publish inventory.stock.updated event
                 correlation_id = getattr(g, 'correlation_id', None)
                 event_publisher.publish_stock_updated(
-                    product_id=item.product_id,
-                    quantity=item.quantity,
+                    product_id=item.sku,  # Using SKU as identifier
+                    quantity=item.quantity_available,
                     correlation_id=correlation_id
                 )
                 
@@ -267,27 +267,27 @@ class StockAdjustment(Resource):
                     return {'error': 'Failed to adjust stock'}, 400
                 
                 # Get updated inventory to publish event
-                item = inventory_service.get_inventory_by_product_id(identifier)
+                item = inventory_service.get_inventory_by_sku(identifier)
                 if item:
                     correlation_id = getattr(g, 'correlation_id', None)
                     event_publisher.publish_stock_updated(
-                        product_id=item.product_id,
-                        quantity=item.quantity,
+                        product_id=item.sku,  # Using SKU as identifier
+                        quantity=item.quantity_available,
                         correlation_id=correlation_id
                     )
                     
                     # Check for low stock alert
-                    if item.quantity <= item.low_stock_threshold:
-                        if item.quantity == 0:
+                    if item.quantity_available <= item.reorder_level:
+                        if item.quantity_available == 0:
                             event_publisher.publish_out_of_stock_alert(
-                                product_id=item.product_id,
+                                product_id=item.sku,  # Using SKU as identifier
                                 correlation_id=correlation_id
                             )
                         else:
                             event_publisher.publish_low_stock_alert(
-                                product_id=item.product_id,
-                                current_quantity=item.quantity,
-                                threshold=item.low_stock_threshold,
+                                product_id=item.sku,  # Using SKU as identifier
+                                current_quantity=item.quantity_available,
+                                threshold=item.reorder_level,
                                 correlation_id=correlation_id
                             )
                 
@@ -361,11 +361,11 @@ class BatchInventoryRetrieval(Resource):
                 for item in inventory_items:
                     result.append({
                         'sku': item.sku,
-                        'quantityAvailable': item.quantity - item.reserved_quantity,
-                        'quantityReserved': item.reserved_quantity,
-                        'reorderPoint': item.minimum_stock_level,
-                        'reorderQuantity': item.maximum_stock_level - item.minimum_stock_level,
-                        'status': 'in_stock' if (item.quantity - item.reserved_quantity) > 0 else 'out_of_stock'
+                        'quantityAvailable': item.quantity_available,
+                        'quantityReserved': item.quantity_reserved,
+                        'reorderPoint': item.reorder_level,
+                        'reorderQuantity': item.max_stock - item.reorder_level if item.max_stock > item.reorder_level else 0,
+                        'status': 'in_stock' if item.quantity_available > 0 else 'out_of_stock'
                     })
                 
                 return result, 200
