@@ -38,10 +38,26 @@ def create_app(config_name='default'):
     # Register API blueprints
     try:
         from src.api.controllers import inventory_bp
-        app.register_blueprint(inventory_bp, url_prefix='/api/v1')
-        app.logger.info("API controllers registered successfully")
+        app.register_blueprint(inventory_bp, url_prefix='/api')
+        app.logger.info("Inventory API registered successfully")
     except Exception as e:
-        app.logger.warning(f"API controller registration failed: {e}. Running without API endpoints.")
+        app.logger.warning(f"Inventory API registration failed: {e}. Running without API endpoints.")
+    
+    # Register reservations blueprint
+    try:
+        from src.api.controllers import reservations_bp
+        app.register_blueprint(reservations_bp, url_prefix='/api')
+        app.logger.info("Reservations API registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Reservations API registration failed: {e}")
+    
+    # Register operational/health blueprint
+    try:
+        from src.api.controllers import operational_hp
+        app.register_blueprint(operational_hp)
+        app.logger.info("Operational endpoints registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Operational endpoints registration failed: {e}")
     
     # Register home endpoints blueprint
     try:
@@ -50,14 +66,6 @@ def create_app(config_name='default'):
         app.logger.info("Home endpoints registered successfully")
     except Exception as e:
         app.logger.warning(f"Home endpoints registration failed: {e}")
-    
-    # Register health endpoints blueprint
-    try:
-        from src.api.controllers.health import health_bp
-        app.register_blueprint(health_bp)
-        app.logger.info("Health endpoints registered successfully")
-    except Exception as e:
-        app.logger.warning(f"Health endpoints registration failed: {e}")
     
     # Register Dapr events blueprint
     try:

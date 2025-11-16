@@ -2,8 +2,8 @@
 Inventory Controller - Handles inventory CRUD operations and stock management
 """
 
-from flask import request, g
-from flask_restx import Resource, fields
+from flask import Blueprint, request, g, jsonify
+from flask_restx import Api, Resource, fields
 from marshmallow import ValidationError
 from src.services import InventoryService
 from src.utils.schemas import (
@@ -15,6 +15,14 @@ from src.events.publisher import event_publisher
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Create blueprint
+inventory_bp = Blueprint('inventory', __name__)
+api = Api(inventory_bp, version='1.0', title='Inventory API',
+          description='Inventory management endpoints', doc='/docs/')
+
+# Create namespace
+inventory_ns = api.namespace('inventory', description='Inventory operations')
 
 # Initialize schemas
 inventory_request_schema = InventoryItemRequestSchema()
@@ -51,12 +59,12 @@ def get_inventory_models(api):
     return inventory_item_model, stock_adjustment_model
 
 
-def register_inventory_routes(api, namespace):
-    """Register inventory-related routes"""
-    inventory_item_model, stock_adjustment_model = get_inventory_models(api)
+# Define models
+inventory_item_model, stock_adjustment_model = get_inventory_models(api)
 
-    @namespace.route('/')
-    class InventoryList(Resource):
+# Register routes
+@inventory_ns.route('/')
+class InventoryList(Resource):
         @api.doc('list_inventory')
         @api.marshal_list_with(inventory_item_model)
         def get(self):
@@ -118,20 +126,68 @@ def register_inventory_routes(api, namespace):
                 logger.error(f"Error creating inventory item: {e}")
                 return {'error': 'Internal server error'}, 500
 
-    @namespace.route('/<string:identifier>')
-    class InventoryItem(Resource):
+        @api.doc('bulk_update_inventory')
+        def put(self):
+            """Bulk update inventory items"""
+            try:
+                # Validate request data
+                data = bulk_operation_schema.load(request.json)
+                
+                inventory_service = InventoryService()
+                results = inventory_service.bulk_update_inventory(data['operations'])
+                
+                return {'results': results}, 200
+                
+            except ValidationError as e:
+                return {'error': 'Validation failed', 'details': e.messages}, 400
+            except Exception as e:
+                logger.error(f"Error performing bulk update: {e}")
+                return {'error': 'Internal server error'}, 500
+
+        @api.doc('bulk_delete_inventory')
+        def delete(self):
+            """Bulk delete inventory items"""
+            try:
+                # Expect request body with 'skus' array
+                if not request.json or 'skus' not in request.json:
+                    return {'error': 'Request must contain "skus" array'}, 400
+                
+                skus = request.json['skus']
+                if not isinstance(skus, list) or not skus:
+                    return {'error': '"skus" must be a non-empty array'}, 400
+                
+                inventory_service = InventoryService()
+                results = []
+                
+                for sku in skus:
+                    try:
+                        success = inventory_service.delete_inventory_item(sku)
+                        results.append({
+                            'sku': sku,
+                            'success': success,
+                            'message': 'Deleted successfully' if success else 'Not found'
+                        })
+                    except Exception as e:
+                        results.append({
+                            'sku': sku,
+                            'success': False,
+                            'message': str(e)
+                        })
+                
+                return {'results': results}, 200
+                
+            except Exception as e:
+                logger.error(f"Error performing bulk delete: {e}")
+                return {'error': 'Internal server error', 'details': str(e)}, 500
+
+@inventory_ns.route('/<string:identifier>')
+class InventoryItem(Resource):
         @api.doc('get_inventory')
         def get(self, identifier):
-            """Get inventory item by SKU or product ID"""
+            """Get inventory item by SKU"""
             try:
                 inventory_service = InventoryService()
-                
-                # Try to get by SKU first (preferred method)
                 item = inventory_service.get_inventory_by_sku(identifier)
-                
-                # Fall back to product_id if SKU not found
-                if not item:
-                    item = inventory_service.get_inventory_by_product_id(identifier)
                 
                 if not item:
                     return {'error': 'Inventory item not found'}, 404
@@ -140,26 +196,20 @@ def register_inventory_routes(api, namespace):
                 return result, 200
                 
             except Exception as e:
-                logger.error(f"Error getting inventory for identifier {identifier}: {e}")
+                logger.error(f"Error getting inventory for SKU {identifier}: {e}")
                 return {'error': 'Internal server error'}, 500
 
         @api.doc('update_inventory')
         @api.expect(inventory_item_model)
         @api.marshal_with(inventory_item_model)
         def put(self, identifier):
-            """Update inventory item by SKU or product ID"""
+            """Update inventory item by SKU"""
             try:
                 # Validate request data
                 data = inventory_request_schema.load(request.json)
                 
                 inventory_service = InventoryService()
-                
-                # Try SKU first, fall back to product_id
-                item = inventory_service.get_inventory_by_sku(identifier)
-                if item:
-                    item = inventory_service.update_inventory_item(identifier, **data)
-                else:
-                    item = inventory_service.update_inventory_item(identifier, **data)
+                item = inventory_service.update_inventory_item(identifier, **data)
                 
                 if not item:
                     return {'error': 'Inventory item not found'}, 404
@@ -199,34 +249,8 @@ def register_inventory_routes(api, namespace):
                 logger.error(f"Error deleting inventory: {e}")
                 return {'error': 'Internal server error'}, 500
 
-    @namespace.route('/<string:identifier>/check')
-    class CheckInventory(Resource):
-        @api.doc('check_inventory')
-        @api.param('quantity', 'Quantity to check', type=int, required=True)
-        def get(self, identifier):
-            """Check if SKU or product has sufficient stock"""
-            try:
-                quantity = request.args.get('quantity', type=int)
-                if not quantity or quantity < 1:
-                    return {'error': 'Valid quantity parameter required'}, 400
-                
-                inventory_service = InventoryService()
-                result = inventory_service.check_availability(identifier, quantity)
-                
-                return {
-                    'success': True,
-                    'available': result['available'],
-                    'sku': identifier,
-                    'requested_quantity': quantity,
-                    'available_quantity': result.get('available_quantity', 0)
-                }, 200
-                
-            except Exception as e:
-                logger.error(f"Error checking inventory for {identifier}: {e}")
-                return {'error': 'Internal server error'}, 500
-
-    @namespace.route('/<string:identifier>/adjust')
-    class StockAdjustment(Resource):
+@inventory_ns.route('/<string:identifier>/adjust')
+class StockAdjustment(Resource):
         @api.doc('adjust_stock')
         @api.expect(stock_adjustment_model)
         def post(self, identifier):
@@ -234,7 +258,7 @@ def register_inventory_routes(api, namespace):
             try:
                 # Validate request data
                 data = stock_adjustment_schema.load(request.json)
-                data['product_id'] = product_id  # Ensure consistency
+                data['product_id'] = identifier  # Ensure consistency
                 
                 inventory_service = InventoryService()
                 movement = inventory_service.adjust_stock(**data)
@@ -243,7 +267,7 @@ def register_inventory_routes(api, namespace):
                     return {'error': 'Failed to adjust stock'}, 400
                 
                 # Get updated inventory to publish event
-                item = inventory_service.get_inventory_by_product_id(product_id)
+                item = inventory_service.get_inventory_by_product_id(identifier)
                 if item:
                     correlation_id = getattr(g, 'correlation_id', None)
                     event_publisher.publish_stock_updated(
@@ -275,24 +299,30 @@ def register_inventory_routes(api, namespace):
             except ValueError as e:
                 return {'error': str(e)}, 400
             except Exception as e:
-                logger.error(f"Error adjusting stock for product {product_id}: {e}")
+                logger.error(f"Error adjusting stock for product {identifier}: {e}")
                 return {'error': 'Internal server error'}, 500
 
-    @namespace.route('/check-availability')
-    class CheckAvailability(Resource):
+@inventory_ns.route('/check')
+class CheckAvailability(Resource):
         @api.doc('check_stock_availability')
         def post(self):
-            """Check stock availability for multiple items"""
+            """Check stock availability for one or multiple items"""
             try:
-                if not request.json or 'items' not in request.json:
-                    return {'error': 'Missing items in request body'}, 400
+                if not request.json:
+                    return {'error': 'Request body required'}, 400
                 
-                items = request.json['items']
+                # Support both single item {sku, quantity} and multiple items {items: [...]}
+                if 'items' in request.json:
+                    items = request.json['items']
+                    if not isinstance(items, list) or not items:
+                        return {'error': 'Items must be a non-empty array'}, 400
+                elif 'sku' in request.json and 'quantity' in request.json:
+                    # Single item - convert to array format
+                    items = [{'sku': request.json['sku'], 'quantity': request.json['quantity']}]
+                else:
+                    return {'error': 'Request must contain either "items" array or "sku" and "quantity"'}, 400
                 
                 # Validate items format
-                if not isinstance(items, list) or not items:
-                    return {'error': 'Items must be a non-empty array'}, 400
-                
                 for item in items:
                     if not isinstance(item, dict) or 'sku' not in item or 'quantity' not in item:
                         return {'error': 'Each item must have sku and quantity'}, 400
@@ -306,41 +336,40 @@ def register_inventory_routes(api, namespace):
                 logger.error(f"Error checking stock availability: {e}")
                 return {'error': 'Internal server error', 'details': str(e)}, 500
 
-    @namespace.route('/bulk')
-    class BulkOperations(Resource):
-        @api.doc('bulk_operations')
+@inventory_ns.route('/batch')
+class BatchInventoryRetrieval(Resource):
+        @api.doc('batch_inventory_retrieval')
         def post(self):
-            """Perform bulk inventory operations"""
+            """Get inventory data for multiple SKUs in a single request"""
             try:
-                # Validate request data
-                data = bulk_operation_schema.load(request.json)
+                # Validate request has 'skus' array
+                data = request.json
+                if not data or 'skus' not in data:
+                    return {'error': 'Request must contain "skus" array'}, 400
+                
+                skus = data['skus']
+                if not isinstance(skus, list):
+                    return {'error': '"skus" must be an array'}, 400
                 
                 inventory_service = InventoryService()
-                results = inventory_service.bulk_update_inventory(data['operations'])
                 
-                return {'results': results}, 200
+                # Get inventory items by SKUs
+                inventory_items = inventory_service.inventory_repo.get_multiple_by_skus(skus)
                 
-            except ValidationError as e:
-                return {'error': 'Validation failed', 'details': e.messages}, 400
-            except Exception as e:
-                logger.error(f"Error performing bulk operations: {e}")
-                return {'error': 'Internal server error'}, 500
-
-    @namespace.route('/health')
-    class InventoryHealth(Resource):
-        @api.doc('inventory_health')
-        def get(self):
-            """Basic health check for inventory service"""
-            try:
-                inventory_service = InventoryService()
-                health_status = inventory_service.health_check()
+                # Serialize response
+                result = []
+                for item in inventory_items:
+                    result.append({
+                        'sku': item.sku,
+                        'quantityAvailable': item.quantity - item.reserved_quantity,
+                        'quantityReserved': item.reserved_quantity,
+                        'reorderPoint': item.minimum_stock_level,
+                        'reorderQuantity': item.maximum_stock_level - item.minimum_stock_level,
+                        'status': 'in_stock' if (item.quantity - item.reserved_quantity) > 0 else 'out_of_stock'
+                    })
                 
-                return health_status, 200
+                return result, 200
                 
             except Exception as e:
-                logger.error(f"Health check failed: {e}")
-                return {
-                    'status': 'unhealthy',
-                    'service': 'inventory-service',
-                    'error': str(e)
-                }, 503
+                logger.error(f"Error retrieving batch inventory: {e}")
+                return {'error': 'Internal server error', 'details': str(e)}, 500

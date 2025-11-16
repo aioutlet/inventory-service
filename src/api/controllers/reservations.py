@@ -2,8 +2,8 @@
 Reservations Controller - Handles inventory reservation operations
 """
 
-from flask import request
-from flask_restx import Resource, fields
+from flask import Blueprint, request
+from flask_restx import Api, Resource, fields
 from marshmallow import ValidationError
 from src.services import InventoryService
 from src.utils.schemas import (
@@ -13,6 +13,14 @@ from src.utils.schemas import (
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Create blueprint
+reservations_bp = Blueprint('reservations', __name__)
+api = Api(reservations_bp, version='1.0', title='Reservations API',
+          description='Inventory reservation endpoints', doc='/docs/')
+
+# Create namespace
+reservations_ns = api.namespace('reservations', description='Reservation operations')
 
 # Initialize schemas
 reservation_request_schema = ReservationRequestSchema()
@@ -38,12 +46,12 @@ def get_reservation_models(api):
     return reservation_model
 
 
-def register_reservation_routes(api, namespace):
-    """Register reservation-related routes"""
-    reservation_model = get_reservation_models(api)
+# Define models
+reservation_model = get_reservation_models(api)
 
-    @namespace.route('/')
-    class ReservationList(Resource):
+# Register routes
+@reservations_ns.route('/')
+class ReservationList(Resource):
         @api.doc('list_reservations')
         @api.marshal_list_with(reservation_model)
         def get(self):
@@ -107,8 +115,8 @@ def register_reservation_routes(api, namespace):
                 logger.error(f"Error creating reservation: {e}")
                 return {'error': 'Internal server error'}, 500
 
-    @namespace.route('/<int:reservation_id>')
-    class Reservation(Resource):
+@reservations_ns.route('/<int:reservation_id>')
+class Reservation(Resource):
         @api.doc('get_reservation')
         @api.marshal_with(reservation_model)
         def get(self, reservation_id):
@@ -143,8 +151,8 @@ def register_reservation_routes(api, namespace):
                 logger.error(f"Error cancelling reservation {reservation_id}: {e}")
                 return {'error': 'Internal server error'}, 500
 
-    @namespace.route('/confirm')
-    class ReservationConfirm(Resource):
+@reservations_ns.route('/confirm')
+class ReservationConfirm(Resource):
         @api.doc('confirm_reservations')
         def post(self):
             """Confirm multiple reservations"""

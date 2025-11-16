@@ -1,36 +1,13 @@
 """
-Controllers package initialization - Sets up Flask-RESTX API with all namespaces
+Controllers package initialization
 """
 
-from flask import Blueprint
-from flask_restx import Api
-from src.utils.error_handlers import register_error_handlers
-from src.api.controllers.operational import operational_ns
-from src.api.controllers.inventory import register_inventory_routes
-from src.api.controllers.reservations import register_reservation_routes
-import logging
+# Import all blueprints for registration
+from src.api.controllers.inventory import inventory_bp
+from src.api.controllers.reservations import reservations_bp
+from src.api.controllers.stats import stats_bp
+from src.api.controllers.home import home_bp
+from src.api.controllers.events import events_bp
+from src.api.controllers.operational import operational_hp
 
-logger = logging.getLogger(__name__)
-
-# Create Blueprint
-inventory_bp = Blueprint('inventory', __name__)
-api = Api(inventory_bp, version='1.0', title='Inventory Service API',
-          description='Microservice for managing product inventory', 
-          doc='/docs/')
-
-# Define namespaces
-inventory_ns = api.namespace('inventory', description='Inventory operations')
-reservations_ns = api.namespace('reservations', description='Reservation operations')
-
-# Add operational namespace (for monitoring endpoints)
-api.add_namespace(operational_ns)
-
-# Register routes for each namespace
-register_inventory_routes(api, inventory_ns)
-register_reservation_routes(api, reservations_ns)
-
-
-def register_routes(app):
-    """Register all routes with the Flask app"""
-    app.register_blueprint(inventory_bp, url_prefix='/api/v1')
-    register_error_handlers(app)
+__all__ = ['inventory_bp', 'reservations_bp', 'stats_bp', 'home_bp', 'events_bp', 'operational_hp']
