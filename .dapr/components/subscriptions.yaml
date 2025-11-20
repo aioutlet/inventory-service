@@ -1,0 +1,77 @@
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: product-created-subscription
+spec:
+  topic: product.created
+  routes:
+    default: /events/product-created
+  pubsubname: event-bus
+  deadLetterTopic: product.created.deadletter
+scopes:
+  - inventory-service
+---
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: product-updated-subscription
+spec:
+  topic: product.updated
+  routes:
+    default: /events/product-updated
+  pubsubname: event-bus
+  deadLetterTopic: product.updated.deadletter
+scopes:
+  - inventory-service
+---
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: product-deleted-subscription
+spec:
+  topic: product.deleted
+  routes:
+    default: /events/product-deleted
+  pubsubname: event-bus
+  deadLetterTopic: product.deleted.deadletter
+scopes:
+  - inventory-service
+---
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: order-created-subscription
+spec:
+  topic: order.created
+  routes:
+    default: /events/order-created
+  pubsubname: event-bus
+  deadLetterTopic: order.created.deadletter
+scopes:
+  - inventory-service
+---
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: order-cancelled-subscription
+spec:
+  topic: order.cancelled
+  routes:
+    default: /events/order-cancelled
+  pubsubname: event-bus
+  deadLetterTopic: order.cancelled.deadletter
+scopes:
+  - inventory-service
+---
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: order-completed-subscription
+spec:
+  topic: order.completed
+  routes:
+    default: /events/order-completed
+  pubsubname: event-bus
+  deadLetterTopic: order.completed.deadletter
+scopes:
+  - inventory-service

@@ -1,6 +1,6 @@
 """
-Dapr Secret Manager Client
-Manages secrets retrieval using Dapr Secret Store
+Secret Manager Utility
+Manages secrets retrieval using Dapr Secret Store building block
 """
 import os
 import logging

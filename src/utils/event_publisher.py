@@ -11,7 +11,7 @@ from datetime import datetime
 import uuid
 
 # Import trace context for W3C Trace Context support
-from src.api.middlewares.trace_context import get_trace_id
+from src.middlewares.trace_context import get_trace_id
 
 
 class InventoryEventPublisher:

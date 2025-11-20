@@ -7,7 +7,7 @@ import jwt
 from functools import wraps
 from flask import request, g
 import logging
-from src.clients import get_jwt_config
+from src.utils.secret_manager import get_jwt_config
 
 logger = logging.getLogger(__name__)
 

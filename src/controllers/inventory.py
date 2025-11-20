@@ -11,7 +11,7 @@ from src.utils.schemas import (
     StockAdjustmentRequestSchema, StockMovementResponseSchema,
     InventorySearchSchema, BulkOperationRequestSchema
 )
-from src.events.publisher import event_publisher
+from src.utils.event_publisher import event_publisher
 import logging
 
 logger = logging.getLogger(__name__)

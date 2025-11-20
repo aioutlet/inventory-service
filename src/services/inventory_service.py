@@ -9,7 +9,6 @@ from uuid import uuid4
 
 from src.models import InventoryItem, StockMovementType, Reservation, ReservationStatus
 from src.repositories import InventoryRepository, ReservationRepository
-from src.clients.product_service_client import ProductServiceClient
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +19,6 @@ class InventoryService:
     def __init__(self):
         self.inventory_repo = InventoryRepository()
         self.reservation_repo = ReservationRepository()
-        self.product_client = ProductServiceClient()
     
     def check_stock_availability(self, stock_items: List[Dict[str, Any]]) -> Dict[str, Any]:
         """

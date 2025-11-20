@@ -8,7 +8,7 @@ def get_database_uri():
     Called when database connection is actually needed
     """
     try:
-        from src.clients.dapr_secret_manager import get_database_config
+        from src.utils.secret_manager import get_database_config
         db_config = get_database_config()
         return (
             f"mysql+pymysql://{db_config['user']}:{db_config['password']}@"

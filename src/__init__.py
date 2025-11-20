@@ -21,7 +21,7 @@ def create_app(config_name='default'):
     app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri()
     
     # Initialize W3C Trace Context middleware
-    from src.api.middlewares.trace_context import TraceContextMiddleware
+    from src.middlewares.trace_context import TraceContextMiddleware
     trace_middleware = TraceContextMiddleware(app)
     
     # Initialize database
@@ -37,7 +37,7 @@ def create_app(config_name='default'):
     
     # Register API blueprints
     try:
-        from src.api.controllers import inventory_bp
+        from src.controllers import inventory_bp
         app.register_blueprint(inventory_bp, url_prefix='/api')
         app.logger.info("Inventory API registered successfully")
     except Exception as e:
@@ -45,7 +45,7 @@ def create_app(config_name='default'):
     
     # Register reservations blueprint
     try:
-        from src.api.controllers import reservations_bp
+        from src.controllers import reservations_bp
         app.register_blueprint(reservations_bp, url_prefix='/api')
         app.logger.info("Reservations API registered successfully")
     except Exception as e:
@@ -53,7 +53,7 @@ def create_app(config_name='default'):
     
     # Register operational/health blueprint
     try:
-        from src.api.controllers import operational_hp
+        from src.controllers import operational_hp
         app.register_blueprint(operational_hp)
         app.logger.info("Operational endpoints registered successfully")
     except Exception as e:
@@ -61,7 +61,7 @@ def create_app(config_name='default'):
     
     # Register home endpoints blueprint
     try:
-        from src.api.controllers.home import home_bp
+        from src.controllers.home import home_bp
         app.register_blueprint(home_bp)
         app.logger.info("Home endpoints registered successfully")
     except Exception as e:
@@ -69,7 +69,7 @@ def create_app(config_name='default'):
     
     # Register Dapr events blueprint
     try:
-        from src.api.controllers.events import events_bp
+        from src.controllers.events import events_bp
         app.register_blueprint(events_bp)
         app.logger.info("Dapr events blueprint registered successfully")
     except Exception as e:
@@ -77,7 +77,7 @@ def create_app(config_name='default'):
     
     # Register stats blueprint
     try:
-        from src.api.controllers.stats import stats_bp
+        from src.controllers.stats import stats_bp
         app.register_blueprint(stats_bp)
         app.logger.info("Stats blueprint registered successfully")
     except Exception as e:
