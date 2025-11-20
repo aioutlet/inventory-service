@@ -1,6 +1,12 @@
 # Inventory Service - Run with Dapr
 
-Write-Host "Starting Inventory Service with Dapr..."
+#!/usr/bin/env pwsh
+# Run Inventory Service with Dapr sidecar
+# Usage: .\run.ps1
+
+$Host.UI.RawUI.WindowTitle = "Inventory Service"
+
+Write-Host "Starting Inventory Service with Dapr..." -ForegroundColor Green
 Write-Host "Service will be available at: http://localhost:1005"
 Write-Host "Dapr HTTP endpoint: http://localhost:3505"
 Write-Host "Dapr gRPC endpoint: localhost:50005"

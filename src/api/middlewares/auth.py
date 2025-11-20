@@ -11,22 +11,21 @@ from src.clients import get_jwt_config
 
 logger = logging.getLogger(__name__)
 
-# JWT Configuration - loaded from Dapr Secret Store
+# JWT Configuration - loaded from Dapr Secret Store and environment
 _jwt_config = None
-JWT_ALGORITHM = 'HS256'
 
 
-def _get_jwt_secret():
-    """Get JWT secret from Dapr Secret Store"""
+def _get_jwt_config():
+    """Get JWT configuration from Dapr Secret Store and environment"""
     global _jwt_config
     if _jwt_config is None:
         try:
             _jwt_config = get_jwt_config()
-            logger.info('JWT configuration loaded from Dapr Secret Store')
+            logger.info('JWT configuration loaded from Dapr Secret Store and environment')
         except Exception as e:
             logger.error(f'Failed to load JWT configuration from Dapr: {str(e)}')
             raise RuntimeError('JWT configuration not available') from e
-    return _jwt_config['secret']
+    return _jwt_config
 
 
 class AuthError(Exception):
@@ -57,11 +56,13 @@ def get_token_from_request():
 def decode_jwt(token):
     """Decode and validate JWT token"""
     try:
-        jwt_secret = _get_jwt_secret()
+        jwt_config = _get_jwt_config()
         payload = jwt.decode(
             token,
-            jwt_secret,
-            algorithms=[JWT_ALGORITHM]
+            jwt_config['secret'],
+            algorithms=[jwt_config['algorithm']],
+            issuer=jwt_config['issuer'],  # Verify issuer (auth-service)
+            audience=jwt_config['audience']  # Verify audience (aioutlet-platform)
         )
         return payload
     except jwt.ExpiredSignatureError:

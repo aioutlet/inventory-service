@@ -14,7 +14,7 @@ class DaprSecretManager:
     """Client for retrieving secrets from Dapr Secret Store"""
     
     def __init__(self):
-        self.secret_store_name = os.getenv('DAPR_SECRET_STORE_NAME', 'local-secret-store')
+        self.secret_store_name = 'secret-store'
         self.dapr_client = DaprClient()
     
     def get_secret(self, key: str) -> str:
@@ -65,14 +65,14 @@ class DaprSecretManager:
     
     def get_jwt_config(self) -> Dict[str, Any]:
         """
-        Get JWT configuration from secrets
+        Get JWT configuration from secrets and environment
+        Only JWT_SECRET is truly secret - algorithm and expiration are just config
         
         Returns:
             Dictionary with JWT configuration
         """
-        return {
-            'secret': self.get_secret('JWT_SECRET')
-        }
+        import os
+        return {\n            'secret': self.get_secret('JWT_SECRET'),\n            'algorithm': os.environ.get('JWT_ALGORITHM', 'HS256'),\n            'expiration': int(os.environ.get('JWT_EXPIRATION', '3600')),\n            'issuer': os.environ.get('JWT_ISSUER', 'auth-service'),\n            'audience': os.environ.get('JWT_AUDIENCE', 'aioutlet-platform')\n        }
 
 
 
